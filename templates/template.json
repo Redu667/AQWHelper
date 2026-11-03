@@ -1,0 +1,91 @@
+{
+  "class_name": "template",
+  "enhancements": {
+    "Solo": {
+      "Class": {
+        "type": "Type",
+        "info": ""
+      },
+      "Helm": {
+        "type": "Type",
+        "info": ""
+      },
+      "Weapon": {
+        "type": "Type",
+        "info": ""
+      },
+      "Cape": {
+        "type": "Type",
+        "info": ""
+      }
+    },
+    "Group": {
+      "Class": {
+        "type": "Type",
+        "info": ""
+      },
+      "Helm": {
+        "type": "Type",
+        "info": ""
+      },
+      "Weapon": {
+        "type": "Type",
+        "info": ""
+      },
+      "Cape": {
+        "type": "Type",
+        "info": ""
+      }
+    },
+    "Ultra": {
+      "Class": {
+        "type": "Type",
+        "info": ""
+      },
+      "Helm": {
+        "type": "Type",
+        "info": ""
+      },
+      "Weapon": {
+        "type": "Type",
+        "info": ""
+      },
+      "Cape": {
+        "type": "Type",
+        "info": ""
+      }
+    }
+  },
+  "skills": [
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    }
+  ],
+  "passives": [
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    }
+  ]
+}

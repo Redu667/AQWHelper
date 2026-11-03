@@ -42,9 +42,12 @@ account owns it. Use `reload` (or `/rl`) to fetch the account's classes again, a
 list refreshes each time the app opens for the saved
 character. Use `char NAME` to change the saved default. Settings are stored in
 `$XDG_CONFIG_HOME/aqw-helper/config.json`, or `~/.config/aqw-helper/config.json`
-when `XDG_CONFIG_HOME` is unset. Use `/update` to request an information sync;
-the app asks for confirmation. Git synchronization is not configured yet.
-Close the app with `Ctrl+C`.
+when `XDG_CONFIG_HOME` is unset. On launch, the app silently checks the
+version against the project's `main` branch. If a different version is found,
+an update icon appears at the bottom of the Info panel; clicking it fills
+`/update` into the command line without executing it. `/update` still asks for
+confirmation, and automatic code synchronization is not configured yet. Close
+the app with `Ctrl+C`.
 
 Command aliases are `/ch` and `/character` for `/char`, `/rl` for `/reload`,
 `/cl` and `/classes` for `/class`, `/up` for `/update`, and `/r` for `/return`.

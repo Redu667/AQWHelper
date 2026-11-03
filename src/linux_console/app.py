@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -28,7 +29,9 @@ from linux_console.class_data import (
     class_data_names,
     load_or_create_class_data,
 )
+from linux_console.version_check import update_available
 
+logger = logging.getLogger(__name__)
 COMMANDS = (
     ("char", "Load and save a character account."),
     ("reload", "Reload the current character's classes."),
@@ -129,6 +132,18 @@ class LinuxConsoleApp(App[None]):
         height: 1fr;
         padding: 0;
         align-horizontal: left;
+    }
+
+    #update-available {
+        display: none;
+        width: auto;
+        min-width: 0;
+        height: 1;
+        margin: 0 0 0 1;
+        padding: 0;
+        color: #4ade80;
+        background: transparent;
+        border: none;
     }
 
     .info-action {
@@ -233,6 +248,11 @@ class LinuxConsoleApp(App[None]):
                         yield Static("|", id="info-nav-separator")
                         yield Button("Home", id="info-home")
                     yield VerticalScroll(id="info-content")
+                    yield Button(
+                        "⟳",
+                        id="update-available",
+                        tooltip="Update available — type /update",
+                    )
                 yield ListView(id="class-list")
             yield Input(
                 placeholder="Tab/Right complete · Up/Down cycle",
@@ -249,6 +269,11 @@ class LinuxConsoleApp(App[None]):
         self._set_back_enabled(False)
         self._set_home_enabled(False)
         await self._show_commands()
+        self.run_worker(
+            self._check_for_updates(),
+            name="check-for-updates",
+            group="update-check",
+        )
 
         try:
             self.account_history = load_account_history(self.settings_path)
@@ -269,6 +294,14 @@ class LinuxConsoleApp(App[None]):
             group="character-load",
             exclusive=True,
         )
+
+    async def _check_for_updates(self) -> None:
+        try:
+            available = await asyncio.to_thread(update_available)
+        except (OSError, TimeoutError, UnicodeError, ValueError) as error:
+            logger.warning("Could not check for AQW Helper updates: %s", error)
+            return
+        self.query_one("#update-available", Button).display = available
 
     def action_ignore_quit(self) -> None:
         pass
@@ -651,6 +684,11 @@ class LinuxConsoleApp(App[None]):
             await self._navigate_back()
         elif button_id == "info-home":
             await self._show_commands()
+        elif button_id == "update-available":
+            command_input = self.query_one("#command-input", Input)
+            command_input.value = "/update"
+            command_input.cursor_position = len(command_input.value)
+            command_input.focus()
         elif button_id == "nav-enhancements":
             self.info_history.append("Class")
             await self._show_enhancement_modes()

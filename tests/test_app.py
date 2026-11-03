@@ -18,6 +18,38 @@ from linux_console.class_data import (
 
 
 class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        update_check_patcher = patch(
+            "linux_console.app.update_available",
+            return_value=False,
+        )
+        update_check_patcher.start()
+        self.addCleanup(update_check_patcher.stop)
+
+    async def test_update_icon_pastes_command_without_executing_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with patch("linux_console.app.update_available", return_value=True):
+                app = LinuxConsoleApp(
+                    settings_path=Path(temporary_directory) / "config.json",
+                    class_data_path=Path(temporary_directory) / "classes",
+                )
+                async with app.run_test() as pilot:
+                    update_button = app.query_one("#update-available", Button)
+                    await pilot.pause()
+                    self.assertTrue(update_button.display)
+
+                    await pilot.click("#update-available")
+                    await pilot.pause()
+
+                    command_input = app.query_one("#command-input", Input)
+                    self.assertEqual(command_input.value, "/update")
+                    self.assertEqual(
+                        str(
+                            app.query_one("#info-session", Static).render()
+                        ).strip(),
+                        "Commands",
+                    )
+
     async def test_char_without_argument_lists_and_loads_saved_characters(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_path = Path(temporary_directory)
@@ -426,7 +458,7 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(120, 60)) as pilot:
                     info_panel = app.query_one("#info-panel", Vertical)
                     self.assertEqual(info_panel.border_title, "Info")
-                    self.assertEqual(len(app.query(Button)), 2)
+                    self.assertEqual(len(app.query(Button)), 3)
                     self.assertEqual(len(app.query(Footer)), 0)
                     self.assertFalse(app.query_one("#info-back", Button).display)
                     self.assertFalse(app.query_one("#info-home", Button).display)

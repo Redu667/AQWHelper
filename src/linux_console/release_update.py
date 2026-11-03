@@ -11,11 +11,16 @@ from urllib.request import Request, urlopen
 
 REPOSITORY = "SojaIntegral/AQWHelper"
 LATEST_RELEASE_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
+COMPARE_URL = f"https://api.github.com/repos/{REPOSITORY}/compare/"
 ARCHIVE_URL = f"https://github.com/{REPOSITORY}/archive/refs/tags/"
 MAX_ARCHIVE_SIZE = 50 * 1024 * 1024
 
 
 class NoPublishedReleaseError(Exception):
+    pass
+
+
+class StaleReleaseError(RuntimeError):
     pass
 
 
@@ -46,6 +51,24 @@ def install_latest_release(
     tag = release.get("tag_name")
     if not isinstance(tag, str) or not tag.strip() or len(tag) > 200:
         raise ValueError("GitHub returned an invalid release tag.")
+
+    compare_request = Request(
+        f"{COMPARE_URL}{quote(tag, safe='')}...main",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "AQWHelper",
+        },
+    )
+    with urlopen(compare_request, timeout=timeout) as response:
+        comparison: object = json.loads(response.read(64 * 1024).decode("utf-8"))
+    if not isinstance(comparison, dict):
+        raise ValueError("GitHub returned invalid release comparison information.")
+    status = comparison.get("status")
+    if not isinstance(status, str) or status not in {"identical", "behind"}:
+        raise StaleReleaseError(
+            f"Release {tag} is not based on the current main branch. "
+            "Publish a new release with a new tag from the latest main commit."
+        )
 
     archive_url = f"{ARCHIVE_URL}{quote(tag, safe='')}.zip"
     archive_request = Request(archive_url, headers={"User-Agent": "AQWHelper"})

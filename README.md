@@ -44,12 +44,14 @@ character. Use `char NAME` to change the saved default. Settings are stored in
 `$XDG_CONFIG_HOME/aqw-helper/config.json`, or `~/.config/aqw-helper/config.json`
 when `XDG_CONFIG_HOME` is unset. On launch, the app silently checks the
 version against the project's `main` branch. If a different version is found,
-an update icon appears at the bottom of the Info panel; clicking it fills
-`/update` into the command line without executing it. `/update` asks for
-confirmation, then downloads and installs the latest published GitHub release
-into the current Python environment and automatically restarts the app after a
-successful update. The repository must have a published GitHub release for
-this command to install.
+an `↓ Update Pending` button appears at the bottom of the Info panel; clicking
+it fills `/update` into the command line without executing it. `/update` asks
+for confirmation, then downloads and installs the latest published GitHub
+release into the current Python environment and automatically restarts the app
+after a successful update. To prevent downgrades, the updater refuses releases
+whose tag is behind or unrelated to the latest `main` commit; publish a new
+release with a new tag from the latest `main` commit. The repository must have
+a published GitHub release for this command to install.
 Close the app with `Ctrl+C` or `/quit` (alias `/q`). On startup and exit, AQW
 Helper clears transient in-memory character and class data; saved character
 settings and class JSON files are preserved.

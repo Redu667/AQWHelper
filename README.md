@@ -77,7 +77,10 @@ settings and class JSON files are preserved.
 
 Command aliases are `/ch` and `/character` for `/char`, `/rl` for `/reload`,
 `/cl` and `/classes` for `/class`, `/up` for `/update`, and `/r` for `/return`;
-`/q` for `/quit`.
+`/enh` for `/enhancements`, `/st` for `/stats`, and `/q` for `/quit`.
+`enhancements` opens a clickable list of enhancement descriptions from the
+shared enhancement data, and `stats` opens clickable STR, DEX, VIT, INT, WIS,
+and LUK entries whose descriptions can be filled in in `app.py`.
 Tab or Right Arrow
 accepts the current completion suggestion; Up and Down cycle through saved
 character names or class names with JSON data files. When no character history
@@ -105,13 +108,13 @@ each slot heading; unavailable choices are omitted. If neither is owned, Base
 displays with a red `(!)` marker. Each option can be expanded to show its
 shared enhancement details. Each mode's `Potions` object has `Tonic`, `Elixir`,
 and `Potion` text values, displayed as three labeled lines. The shared
-enhancement descriptions are stored once in
-`$XDG_DATA_HOME/aqw-helper/enhancements.json`, or
-`~/.local/share/aqw-helper/enhancements.json` when `XDG_DATA_HOME` is unset;
-the starter schema is available at
-[`templates/enhancements.json`](./templates/enhancements.json). This file has
-separate `enhancements`, `defaults`, and `addons` sections, each with a shared
-`info` string for each name. The always-owned defaults are Fighter, Wizard,
+enhancement descriptions are stored in the tracked catalog at
+[`templates/enhancements.json`](./templates/enhancements.json). Edit that file
+and commit it to share the descriptions through GitHub. It has separate
+`enhancements`, `defaults`, and `addons` sections, each with a shared `info`
+string for each name. The application loads this catalog directly in a source
+checkout; the matching packaged copy is used when installed. The always-owned
+defaults are Fighter, Wizard,
 Healer, Thief, Hybrid, Spellbreaker, and Lucky. Add-ons such as Aweblast,
 Spiral Carve, Mana Vamp, Health Vamp, and Powerword DIE are assumed available
 and are not listed as per-character toggles. Existing class files migrate Solo

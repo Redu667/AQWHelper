@@ -18,6 +18,7 @@ from textual.suggester import Suggester
 from textual.widgets import Button, Input, ListItem, ListView, Static
 
 from linux_console.aqw import (
+    AVAILABLE_ENHANCEMENTS,
     DEFAULT_ENHANCEMENTS,
     TOGGLEABLE_ENHANCEMENTS,
     config_path,
@@ -48,13 +49,16 @@ from linux_console.release_update import (
 logger = logging.getLogger(__name__)
 COMMANDS = (
     ("char", "Load and save a character account."),
-    ("reload", "Reload the current character's classes."),
+    ("reload", "Reload the character's classes."),
     ("class", "Display any class, owned or not."),
+    ("enhancements", "Display all enhancements."),
+    ("stats", "Display stats details."),
     ("return", "Return to the Commands home page."),
     ("update", "Update the app."),
     ("quit", "Close the app."),
 )
 COMMAND_ALIASES = {
+    "c": "char",
     "ch": "char",
     "character": "char",
     "q": "quit",
@@ -63,6 +67,8 @@ COMMAND_ALIASES = {
     "up": "update",
     "cl": "class",
     "classes": "class",
+    "enh": "enhancements",
+    "st": "stats",
 }
 ENHANCEMENT_COLORS = {
     "Vim": "#86efac",
@@ -82,6 +88,22 @@ ENHANCEMENT_COLORS = {
     "Lucky": "#ff69b4",
 }
 DEFAULT_ENHANCEMENT_COLOR = "#f7b176"
+STAT_COLORS = {
+    "STR": ENHANCEMENT_COLORS["Fighter"],
+    "DEX": ENHANCEMENT_COLORS["Thief"],
+    "VIT": ENHANCEMENT_COLORS["Hearty"],
+    "INT": ENHANCEMENT_COLORS["Wizard"],
+    "WIS": ENHANCEMENT_COLORS["Healer"],
+    "LUK": ENHANCEMENT_COLORS["Lucky"],
+}
+STAT_DESCRIPTIONS = {
+    "STR": "",
+    "DEX": "",
+    "VIT": "",
+    "INT": "",
+    "WIS": "",
+    "LUK": "",
+}
 
 
 def enhancement_color(name: str) -> str:
@@ -220,6 +242,10 @@ class LinuxConsoleApp(App[None]):
         content-align: left top;
     }
 
+    .enhancement-info-detail {
+        padding-left: 8;
+    }
+
     .enhancement-category {
         height: 1;
         color: #9ca3af;
@@ -326,7 +352,7 @@ class LinuxConsoleApp(App[None]):
         self._info_panel_title = "Info"
         self.enhancement_data: dict[str, Any] = {}
         self.enhancement_data_file = enhancement_data_path(
-            self.class_data_path.parent
+            self.class_data_path.parent if class_data_path is not None else None
         )
 
     def compose(self) -> ComposeResult:
@@ -616,6 +642,16 @@ class LinuxConsoleApp(App[None]):
                 await self._set_info("Usage: class NAME", "#f87171")
             else:
                 await self._show_selected_class(argument)
+        elif command == "enhancements":
+            if argument:
+                await self._set_info("Usage: enhancements", "#f87171")
+            else:
+                await self._show_enhancement_catalog()
+        elif command == "stats":
+            if argument:
+                await self._set_info("Usage: stats", "#f87171")
+            else:
+                await self._show_stats()
         elif command == "update":
             if argument:
                 await self._set_info("Usage: update", "#f87171")
@@ -932,8 +968,9 @@ class LinuxConsoleApp(App[None]):
         self._set_home_enabled(False)
         await self._clear_info_content()
         content = self.query_one("#info-content", VerticalScroll)
+        command_width = max(len(command) for command, _ in COMMANDS) + 1
         for command, description in COMMANDS:
-            label = Text(f"/{command:<11}", style="#4ade80")
+            label = Text(f"/{command:<{command_width}}", style="#4ade80")
             label.append(description, style="#d1d5db")
             await content.mount(Static(label, classes="info-detail"))
         if status:
@@ -1178,6 +1215,7 @@ class LinuxConsoleApp(App[None]):
                     content,
                     label,
                     enhancement_info(self.enhancement_data, field["type"].strip()),
+                    detail_class="info-detail enhancement-info-detail",
                 )
             await content.mount(Static("", classes="enhancement-spacer"))
         potions = self.selected_class_data["enhancements"][mode]["Potions"]
@@ -1189,6 +1227,42 @@ class LinuxConsoleApp(App[None]):
                 for potion in ("Tonic", "Elixir", "Potion")
             ),
         )
+
+    async def _show_enhancement_catalog(self) -> None:
+        await self._show_catalog_page("Enhancements")
+        content = self.query_one("#info-content", VerticalScroll)
+        names = (*DEFAULT_ENHANCEMENTS, *AVAILABLE_ENHANCEMENTS)
+        for name in names:
+            await self._mount_detail(
+                content,
+                Text(name, style=enhancement_color(name)),
+                enhancement_info(self.enhancement_data, name),
+                empty_message="No enhancement details yet.",
+            )
+
+    async def _show_stats(self) -> None:
+        await self._show_catalog_page("Stats")
+        content = self.query_one("#info-content", VerticalScroll)
+        for name, description in STAT_DESCRIPTIONS.items():
+            await self._mount_detail(
+                content,
+                Text(name, style=STAT_COLORS[name]),
+                description,
+                empty_message="No stat details yet.",
+            )
+
+    async def _show_catalog_page(self, title: str) -> None:
+        self._clear_selected_class_data()
+        self.query_one("#info-panel", Vertical).styles.border = (
+            "round",
+            "#4ade80",
+        )
+        self._set_info_session(title)
+        self._set_back_label("Back")
+        self._set_back_enabled(False)
+        self._set_home_enabled(True)
+        self.detail_counter = 0
+        await self._clear_info_content()
 
     async def _show_skills(self) -> None:
         await self._clear_info_content()
@@ -1211,16 +1285,24 @@ class LinuxConsoleApp(App[None]):
                 await self._mount_detail(content, name, details)
 
     async def _mount_detail(
-        self, content: VerticalScroll, label: str | Text, details: str
+        self,
+        content: VerticalScroll,
+        label: str | Text,
+        details: str,
+        *,
+        empty_message: str | None = None,
+        detail_class: str = "info-detail",
     ) -> None:
         button_id = f"detail-{self.detail_counter}"
         self.detail_counter += 1
-        detail = details or f"No details yet. Edit {self.selected_class_file}."
+        detail = details or empty_message or (
+            f"No details yet. Edit {self.selected_class_file}."
+        )
         await content.mount(
             Button(label, id=button_id, classes="info-action detail-toggle"),
             Static(
                 style_description_signed_values(detail),
-                classes="info-detail",
+                classes=detail_class,
                 id=f"{button_id}-text",
             ),
         )

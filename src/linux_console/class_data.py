@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+import sysconfig
 from typing import Any
 
 from linux_console.aqw import (
@@ -31,8 +32,20 @@ def class_template_directory() -> Path:
 
 
 def enhancement_data_path(data_directory: Path | None = None) -> Path:
-    directory = data_directory or class_data_directory().parent
-    return directory / "enhancements.json"
+    if data_directory is not None:
+        return data_directory / "enhancements.json"
+
+    source_catalog = (
+        Path(__file__).resolve().parents[2] / "templates" / "enhancements.json"
+    )
+    if source_catalog.is_file():
+        return source_catalog
+    return (
+        Path(sysconfig.get_path("data"))
+        / "share"
+        / "aqw-helper"
+        / "enhancements.json"
+    )
 
 
 def class_data_path(class_name: str, directory: Path | None = None) -> Path:
@@ -187,6 +200,8 @@ def save_enhancement_data(path: Path, data: dict[str, Any]) -> None:
 
 
 def enhancement_info(data: dict[str, Any], name: str) -> str:
+    if name in ENHANCEMENT_ADDONS:
+        return data["addons"][name]["info"]
     for base in DEFAULT_ENHANCEMENTS:
         prefix = f"{base} "
         if name.startswith(prefix):

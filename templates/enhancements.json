@@ -1,0 +1,40 @@
+{
+  "enhancements": {
+    "Forge": {"info": ""},
+    "Vim": {"info": ""},
+    "Examen": {"info": ""},
+    "Anima": {"info": ""},
+    "Pneuma": {"info": ""},
+    "Hearty": {"info": ""},
+    "Absolution": {"info": ""},
+    "Vainglory": {"info": ""},
+    "Avarice": {"info": ""},
+    "Penitence": {"info": ""},
+    "Lament": {"info": ""},
+    "Lacerate": {"info": ""},
+    "Smite": {"info": ""},
+    "Praxis": {"info": ""},
+    "Acheron": {"info": ""},
+    "Hero's Valiance": {"info": ""},
+    "Elysium": {"info": ""},
+    "Arcana's Concerto": {"info": ""},
+    "Dauntless": {"info": ""},
+    "Ravenous": {"info": ""}
+  },
+  "defaults": {
+    "Fighter": {"info": ""},
+    "Wizard": {"info": ""},
+    "Healer": {"info": ""},
+    "Thief": {"info": ""},
+    "Hybrid": {"info": ""},
+    "Spellbreaker": {"info": ""},
+    "Lucky": {"info": ""}
+  },
+  "addons": {
+    "Aweblast": {"info": ""},
+    "Spiral Carve": {"info": ""},
+    "Mana Vamp": {"info": ""},
+    "Health Vamp": {"info": ""},
+    "Powerword DIE": {"info": ""}
+  }
+}

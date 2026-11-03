@@ -20,4 +20,4 @@ linux-console = "linux_console.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-linux_console = ["VERSION"]
+linux_console = ["VERSION", "class_templates/*.json"]

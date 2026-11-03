@@ -1,0 +1,241 @@
+{
+  "class_name": "Ultra OmniKnight",
+  "enhancements": {
+    "Base": {
+      "Class": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Helm": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Weapon": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Cape": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Potions": {
+        "Tonic": "",
+        "Elixir": "",
+        "Potion": ""
+      }
+    },
+    "Solo": {
+      "Class": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Helm": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Weapon": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Cape": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Potions": {
+        "Tonic": "",
+        "Elixir": "",
+        "Potion": ""
+      }
+    },
+    "Group": {
+      "Class": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Helm": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Weapon": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Cape": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Potions": {
+        "Tonic": "",
+        "Elixir": "",
+        "Potion": ""
+      }
+    },
+    "Special": {
+      "Class": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Helm": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Weapon": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Cape": {
+        "best": {
+          "type": ""
+        },
+        "alternative": {
+          "type": "",
+          "base": {
+            "type": "Type"
+          }
+        }
+      },
+      "Potions": {
+        "Tonic": "",
+        "Elixir": "",
+        "Potion": ""
+      }
+    }
+  },
+  "skills": [
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    }
+  ],
+  "passives": [
+    {
+      "name": "",
+      "info": ""
+    },
+    {
+      "name": "",
+      "info": ""
+    }
+  ]
+}

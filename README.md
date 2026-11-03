@@ -29,20 +29,39 @@ You can also start it without the installed command:
 PYTHONPATH=src .venv/bin/python -m linux_console
 ```
 
-The screen has two panels: `Info` lists the available commands, and the class
-panel is titled with the current account name. Enter `char NAME` (for example,
-`char Potato Lady`) to load a character; an optional leading slash is accepted.
+The screen has two panels: `Info` lists the available commands, and changes to
+`Char: NAME` while a character is loaded. The right panel has `Classes` and
+`Enhancements` tabs in its top frame; click either title to switch tabs.
+The Info panel's Back and Home controls are also clickable in its top frame.
+Mouse input stays enabled for clickable controls, so the terminal's normal
+drag-to-select text behavior is unavailable while the app is running. On the
+first launch, when no characters are saved, the app opens with a centered
+`Character name` field; enter a name to save and load that character. After
+that, enter
+`char NAME` (for example, `char Potato Lady`) to
+load a character; an optional leading slash is accepted.
 Enter `char` without a name to show saved characters in the Info panel, then
 click a name to load it and return to the Commands view. Use `char -NAME` to
 remove a character from the saved list; removing the startup-default character
-also clears it as the default.
+selects the most recently used remaining character as the startup character.
 Use `class NAME` to display any class in the Info panel, whether or not the
 account owns it. Use `reload` (or `/rl`) to fetch the account's classes again, and
 `return` (or `/r`) to return to the Commands home page. The class
 list refreshes each time the app opens for the saved
-character. Use `char NAME` to change the saved default. Settings are stored in
-`$XDG_CONFIG_HOME/aqw-helper/config.json`, or `~/.config/aqw-helper/config.json`
-when `XDG_CONFIG_HOME` is unset. On launch, the app silently checks the
+character. The last-used character and saved-character list are stored together
+in `profiles.json` beside the settings file at
+`$XDG_CONFIG_HOME/aqw-helper/` (or `~/.config/aqw-helper/` when
+`XDG_CONFIG_HOME` is unset). Older character settings are migrated from
+`config.json` automatically. Enhancement selections start fully enabled,
+can be toggled in the `Enhancements` tab, and are saved per character as
+individual JSON files in the `characters` subfolder. Enhancement names are
+color-coded, with unlisted enhancements using a light orange accent. Optional
+add-on combinations inherit the color of their default enhancement, such as
+`Wizard Mana Vamp` using the Wizard color. The always-available defaults use
+dark red for Fighter, dark green for Thief, dark blue for Wizard, white for
+Healer, orange-brown for Spellbreaker, light brown for Hybrid, and pink for
+Lucky.
+On launch, the app silently checks the
 version against the project's `main` branch. If a different version is found,
 an `↓ Update Pending` button appears at the bottom of the Info panel; clicking
 it fills `/update` into the command line without executing it. `/update` asks
@@ -71,17 +90,42 @@ details. The first time a class is opened, AQW Helper creates a JSON template
 for it in
 `$XDG_DATA_HOME/aqw-helper/classes/`, or
 `~/.local/share/aqw-helper/classes/` when `XDG_DATA_HOME` is unset. Edit that
-class's JSON file to add enhancement types and details, and skill names and
-details; reopen the class in the app to see the edits. Enhancement entries have
-`type` and `info` strings under `enhancements` → `Solo`/`Group`/`Ultra` →
-`Class`/`Helm`/`Weapon`/`Cape`. The `skills` array contains five objects with
+class's JSON file for local overrides. Tracked class defaults live in
+`src/linux_console/class_templates/`, ship with the application, and are loaded
+whenever class data is opened; nonblank values in a local class file override
+the tracked defaults. Edit and commit those templates to share class setups
+with the project. In displayed JSON descriptions, signed
+tokens beginning with `+` are light green and tokens beginning with `-` are
+light red; following characters in the same space-delimited token share that
+color. Class enhancement choices are stored under `enhancements` →
+`Base`/`Solo`/`Group`/`Special` → `Class`/`Helm`/`Weapon`/`Cape` →
+`best` and `alternative`, with `base` nested under `alternative` as the final
+fallback. Available Best and Alternative choices display together beneath
+each slot heading; unavailable choices are omitted. If neither is owned, Base
+displays with a red `(!)` marker. Each option can be expanded to show its
+shared enhancement details. Each mode's `Potions` object has `Tonic`, `Elixir`,
+and `Potion` text values, displayed as three labeled lines. The shared
+enhancement descriptions are stored once in
+`$XDG_DATA_HOME/aqw-helper/enhancements.json`, or
+`~/.local/share/aqw-helper/enhancements.json` when `XDG_DATA_HOME` is unset;
+the starter schema is available at
+[`templates/enhancements.json`](./templates/enhancements.json). This file has
+separate `enhancements`, `defaults`, and `addons` sections, each with a shared
+`info` string for each name. The always-owned defaults are Fighter, Wizard,
+Healer, Thief, Hybrid, Spellbreaker, and Lucky. Add-ons such as Aweblast,
+Spiral Carve, Mana Vamp, Health Vamp, and Powerword DIE are assumed available
+and are not listed as per-character toggles. Existing class files migrate Solo
+and Group unchanged, map Ultra to Special, copy the previous Solo setup into
+Base, and convert backup/default choices and potion lists to the new format.
+The `skills` array contains five objects with
 `name` and `info` strings. `passives` contains two objects by default and may
 contain a third; each has `name` and `info` strings. Blank skill names display
 as `Skill 1` through `Skill 5`, blank passive names as `Passive 1` and
 `Passive 2`. The optional third passive appears only when its name or info is
 filled in. A reusable JSON example is available at
 [`templates/template.json`](./templates/template.json). Older class files are
-upgraded with the two default passive fields when opened.
+upgraded with the two default passive fields when opened; their existing
+enhancement descriptions are moved into the shared enhancement file.
 
 The character page renders its inventory with JavaScript, so its class spans
 are not in the initial HTML. The app reads the character ID from the page,

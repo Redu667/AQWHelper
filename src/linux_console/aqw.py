@@ -3,12 +3,55 @@ import os
 import re
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 
 CHARACTER_PAGE_URL = "https://account.aq.com/CharPage"
 USER_AGENT = "AQW-Helper/0.1"
+DEFAULT_ENHANCEMENTS = (
+    "Fighter",
+    "Wizard",
+    "Healer",
+    "Thief",
+    "Hybrid",
+    "Spellbreaker",
+    "Lucky",
+)
+ENHANCEMENT_ADDONS = (
+    "Aweblast",
+    "Spiral Carve",
+    "Mana Vamp",
+    "Health Vamp",
+    "Powerword DIE",
+)
+AVAILABLE_ENHANCEMENTS = (
+    "Forge",
+    "Vim",
+    "Examen",
+    "Anima",
+    "Pneuma",
+    "Hearty",
+    "Absolution",
+    "Vainglory",
+    "Avarice",
+    "Penitence",
+    "Lament",
+    "Lacerate",
+    "Smite",
+    "Praxis",
+    "Acheron",
+    "Hero's Valiance",
+    "Elysium",
+    "Arcana's Concerto",
+    "Dauntless",
+    "Ravenous",
+    *ENHANCEMENT_ADDONS,
+)
+TOGGLEABLE_ENHANCEMENTS = tuple(
+    name for name in AVAILABLE_ENHANCEMENTS if name not in ENHANCEMENT_ADDONS
+)
+REMOVED_ENHANCEMENTS = ("Awe",)
 
 
 def config_path() -> Path:
@@ -18,111 +61,203 @@ def config_path() -> Path:
     return config_home / "aqw-helper" / "config.json"
 
 
-def load_default_account(path: Path) -> str | None:
-    try:
-        config: Any = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None
-
-    if not isinstance(config, dict):
-        raise ValueError("The saved AQW Helper settings are not a JSON object.")
-
-    account = config.get("account")
-    if account is None:
-        return None
-    if not isinstance(account, str) or not account.strip():
-        raise ValueError("The saved account name is invalid.")
-    return account.strip()
+def profile_data_path(settings_path: Path) -> Path:
+    return settings_path.parent / "profiles.json"
 
 
-def load_account_history(path: Path) -> list[str]:
-    try:
-        config: Any = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return []
-
-    if not isinstance(config, dict):
-        raise ValueError("The saved AQW Helper settings are not a JSON object.")
-
-    history = config.get("account_history", [])
-    if not isinstance(history, list) or any(
-        not isinstance(account, str) or not account.strip() for account in history
-    ):
-        raise ValueError("The saved character history is invalid.")
-
-    unique_history: list[str] = []
+def _normalize_profile_names(profiles: list[str]) -> list[str]:
+    unique_profiles: list[str] = []
     seen: set[str] = set()
-    for account in history:
-        normalized = account.strip()
+    for profile in profiles:
+        normalized = profile.strip()
         folded = normalized.casefold()
         if folded not in seen:
-            unique_history.append(normalized)
+            unique_profiles.append(normalized)
             seen.add(folded)
-    return unique_history
+    return unique_profiles
 
 
-def save_default_account(path: Path, account: str) -> None:
+def _write_profiles(path: Path, profiles: list[str], last_used: str | None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        config: Any = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        config = {}
-    except json.JSONDecodeError:
-        config = {}
-    if not isinstance(config, dict):
-        config = {}
-
-    history = config.get("account_history", [])
-    if not isinstance(history, list) or any(
-        not isinstance(item, str) for item in history
-    ):
-        history = []
-    history = [
-        item
-        for item in history
-        if item.strip().casefold() != account.strip().casefold()
-    ]
-    history.append(account.strip())
     path.write_text(
-        json.dumps({"account": account, "account_history": history}, indent=2) + "\n",
+        json.dumps(
+            {
+                "last_used": last_used,
+                "profiles": profiles,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
 
-def remove_saved_account(path: Path, account: str) -> bool:
+def load_profiles(settings_path: Path) -> tuple[list[str], str | None]:
+    path = profile_data_path(settings_path)
     try:
-        config: Any = json.loads(path.read_text(encoding="utf-8"))
+        data: Any = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        return False
+        data = None
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Invalid JSON in {path}: {error}") from error
 
-    if not isinstance(config, dict):
-        raise ValueError("The saved AQW Helper settings are not a JSON object.")
+    if data is None:
+        try:
+            settings: Any = json.loads(settings_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            settings = {}
+        except json.JSONDecodeError as error:
+            raise ValueError(
+                f"Invalid JSON in settings {settings_path}: {error}"
+            ) from error
+        if not isinstance(settings, dict):
+            raise ValueError("The saved AQW Helper settings are not a JSON object.")
 
-    history = config.get("account_history", [])
-    if not isinstance(history, list) or any(
-        not isinstance(item, str) or not item.strip() for item in history
+        legacy_profiles = settings.get("account_history", [])
+        if not isinstance(legacy_profiles, list) or any(
+            not isinstance(profile, str) or not profile.strip()
+            for profile in legacy_profiles
+        ):
+            raise ValueError("The saved profile list is invalid.")
+        legacy_last_used = settings.get("account")
+        if legacy_last_used is not None and (
+            not isinstance(legacy_last_used, str) or not legacy_last_used.strip()
+        ):
+            raise ValueError("The saved last-used profile is invalid.")
+        profiles = _normalize_profile_names(legacy_profiles)
+        if legacy_last_used:
+            last_used = legacy_last_used.strip()
+            profiles = [
+                profile
+                for profile in profiles
+                if profile.casefold() != last_used.casefold()
+            ]
+            profiles.append(last_used)
+        else:
+            last_used = None
+        _write_profiles(path, profiles, last_used)
+
+        if "account" in settings or "account_history" in settings:
+            settings.pop("account", None)
+            settings.pop("account_history", None)
+            settings_path.write_text(
+                json.dumps(settings, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        return profiles, last_used
+
+
+    if not isinstance(data, dict):
+        raise ValueError("The saved profile data is not a JSON object.")
+    profiles = data.get("profiles")
+    if not isinstance(profiles, list) or any(
+        not isinstance(profile, str) or not profile.strip() for profile in profiles
     ):
-        raise ValueError("The saved character history is invalid.")
+        raise ValueError("The saved profile list is invalid.")
 
-    normalized_name = account.strip().casefold()
-    remaining = [
-        item
-        for item in history
-        if item.strip().casefold() != normalized_name
+    profiles = _normalize_profile_names(profiles)
+    last_used = data.get("last_used")
+    if last_used is not None and (
+        not isinstance(last_used, str) or not last_used.strip()
+    ):
+        raise ValueError("The saved last-used profile is invalid.")
+    if isinstance(last_used, str):
+        last_used = last_used.strip()
+        if last_used.casefold() not in {profile.casefold() for profile in profiles}:
+            raise ValueError("The last-used profile is missing from the profile list.")
+    if not profiles and last_used is not None:
+        raise ValueError(
+            "Last-used profile cannot be set when the profile list is empty."
+        )
+    return profiles, last_used
+
+
+def save_profile(settings_path: Path, profile: str) -> tuple[list[str], str]:
+    normalized = profile.strip()
+    if not normalized:
+        raise ValueError("Profile name cannot be empty.")
+    profiles, _ = load_profiles(settings_path)
+    profiles = [
+        saved for saved in profiles if saved.casefold() != normalized.casefold()
     ]
-    default_account = config.get("account")
-    default_matches = (
-        isinstance(default_account, str)
-        and default_account.strip().casefold() == normalized_name
+    profiles.append(normalized)
+    _write_profiles(profile_data_path(settings_path), profiles, normalized)
+    return profiles, normalized
+
+
+def character_enhancements_path(settings_path: Path, account: str) -> Path:
+    filename = quote(account.strip().casefold(), safe="") or "character"
+    return settings_path.parent / "characters" / f"{filename}.json"
+
+
+def load_character_enhancements(settings_path: Path, account: str) -> set[str]:
+    path = character_enhancements_path(settings_path, account)
+    try:
+        character: Any = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return set(TOGGLEABLE_ENHANCEMENTS)
+
+    saved_account = character.get("account") if isinstance(character, dict) else None
+    if not isinstance(saved_account, str) or saved_account.casefold() != (
+        account.strip().casefold()
+    ):
+        raise ValueError(f"Saved character settings for {account} are invalid.")
+
+    selected = character.get("enhancements")
+    if not isinstance(selected, list) or any(
+        not isinstance(name, str)
+        or name not in AVAILABLE_ENHANCEMENTS + REMOVED_ENHANCEMENTS
+        for name in selected
+    ):
+        raise ValueError(f"Saved enhancements for {account} are invalid.")
+    if len(set(selected)) != len(selected):
+        raise ValueError(f"Saved enhancements for {account} contain duplicates.")
+    return set(selected).intersection(TOGGLEABLE_ENHANCEMENTS)
+
+
+def save_character_enhancements(
+    settings_path: Path,
+    account: str,
+    selected: set[str],
+) -> None:
+    invalid = selected.difference(TOGGLEABLE_ENHANCEMENTS)
+    if invalid:
+        raise ValueError(f"Unknown enhancement selection: {', '.join(sorted(invalid))}")
+
+    path = character_enhancements_path(settings_path, account)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "account": account.strip(),
+                "enhancements": [
+                    name for name in TOGGLEABLE_ENHANCEMENTS if name in selected
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
     )
-    removed = len(remaining) != len(history) or default_matches
+
+
+def remove_profile(settings_path: Path, profile: str) -> bool:
+    normalized_name = profile.strip().casefold()
+    if not normalized_name:
+        raise ValueError("Profile name cannot be empty.")
+    profiles, last_used = load_profiles(settings_path)
+    profile_file = profile_data_path(settings_path)
+    remaining = [saved for saved in profiles if saved.casefold() != normalized_name]
+    removed = len(remaining) != len(profiles)
     if not removed:
         return False
 
-    config["account_history"] = remaining
-    if default_matches:
-        config.pop("account", None)
-    path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    if last_used and last_used.casefold() == normalized_name:
+        last_used = remaining[-1] if remaining else None
+    _write_profiles(profile_file, remaining, last_used)
+    enhancement_path = character_enhancements_path(settings_path, profile)
+    if enhancement_path.exists():
+        enhancement_path.unlink()
     return True
 
 

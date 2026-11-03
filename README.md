@@ -45,12 +45,18 @@ character. Use `char NAME` to change the saved default. Settings are stored in
 when `XDG_CONFIG_HOME` is unset. On launch, the app silently checks the
 version against the project's `main` branch. If a different version is found,
 an update icon appears at the bottom of the Info panel; clicking it fills
-`/update` into the command line without executing it. `/update` still asks for
-confirmation, and automatic code synchronization is not configured yet. Close
-the app with `Ctrl+C`.
+`/update` into the command line without executing it. `/update` asks for
+confirmation, then downloads and installs the latest published GitHub release
+into the current Python environment and automatically restarts the app after a
+successful update. The repository must have a published GitHub release for
+this command to install.
+Close the app with `Ctrl+C` or `/quit` (alias `/q`). On startup and exit, AQW
+Helper clears transient in-memory character and class data; saved character
+settings and class JSON files are preserved.
 
 Command aliases are `/ch` and `/character` for `/char`, `/rl` for `/reload`,
-`/cl` and `/classes` for `/class`, `/up` for `/update`, and `/r` for `/return`.
+`/cl` and `/classes` for `/class`, `/up` for `/update`, and `/r` for `/return`;
+`/q` for `/quit`.
 Tab or Right Arrow
 accepts the current completion suggestion; Up and Down cycle through saved
 character names or class names with JSON data files. When no character history

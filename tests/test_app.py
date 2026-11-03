@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 import tempfile
 import threading
 import unittest
@@ -9,12 +10,13 @@ from unittest.mock import patch
 from textual.containers import Vertical
 from textual.widgets import Button, Footer, Input, ListView, Static
 
-from linux_console.app import LinuxConsoleApp
+from linux_console.app import LinuxConsoleApp, main
 from linux_console.aqw import save_default_account
 from linux_console.class_data import (
     class_data_path,
     load_or_create_class_data,
 )
+from linux_console.release_update import NoPublishedReleaseError
 
 
 class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
@@ -26,7 +28,7 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
         update_check_patcher.start()
         self.addCleanup(update_check_patcher.stop)
 
-    async def test_update_icon_pastes_command_without_executing_it(self) -> None:
+    async def test_update_button_pastes_command_without_executing_it(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             with patch("linux_console.app.update_available", return_value=True):
                 app = LinuxConsoleApp(
@@ -35,6 +37,17 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                 )
                 async with app.run_test() as pilot:
                     update_button = app.query_one("#update-available", Button)
+                    version_label = app.query_one("#version-label", Static)
+                    self.assertEqual(str(version_label.render()), "v.1.0")
+                    self.assertEqual(
+                        str(update_button.label),
+                        "↓ Update Pending",
+                    )
+                    self.assertEqual(version_label.region.y, 1)
+                    self.assertGreater(
+                        version_label.region.x,
+                        app.query_one("#banner", Static).region.x,
+                    )
                     await pilot.pause()
                     self.assertTrue(update_button.display)
 
@@ -49,6 +62,42 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                         ).strip(),
                         "Commands",
                     )
+
+    async def test_update_confirmation_downloads_latest_release(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            app = LinuxConsoleApp(
+                settings_path=Path(temporary_directory) / "config.json",
+                class_data_path=Path(temporary_directory) / "classes",
+            )
+            with patch(
+                "linux_console.app.install_latest_release",
+                return_value="v1.2",
+            ) as install:
+                async with app.run_test() as pilot:
+                    command_input = app.query_one("#command-input", Input)
+                    command_input.value = "/update"
+                    await pilot.press("enter")
+                    await pilot.pause()
+                    await pilot.click("#update-yes")
+                    await pilot.pause(0.2)
+
+                    install.assert_called_once()
+                    self.assertFalse(app.is_running)
+                    self.assertTrue(app.restart_requested)
+
+    def test_main_reexecutes_module_after_update(self) -> None:
+        with (
+            patch("linux_console.app.LinuxConsoleApp") as app_class,
+            patch("linux_console.app.os.execv") as execv,
+            patch("linux_console.app.sys.argv", ["aqwhelper"]),
+        ):
+            app_class.return_value.restart_requested = True
+            main()
+
+        execv.assert_called_once_with(
+            sys.executable,
+            [sys.executable, "-m", "linux_console"],
+        )
 
     async def test_char_without_argument_lists_and_loads_saved_characters(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -195,6 +244,85 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                 await pilot.press("ctrl+q")
                 await pilot.pause()
                 self.assertTrue(app.is_running)
+
+    async def test_quit_command_and_alias_clear_runtime_state_only(self) -> None:
+        for command in ("/quit", "/q"):
+            with (
+                self.subTest(command=command),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                temporary_path = Path(temporary_directory)
+                settings_path = temporary_path / "config.json"
+                class_directory = temporary_path / "classes"
+                save_default_account(settings_path, "Potato Lady")
+                class_file = class_data_path("Arachnomancer", class_directory)
+                load_or_create_class_data("Arachnomancer", class_directory)
+
+                with patch(
+                    "linux_console.app.fetch_classes",
+                    return_value=["Arachnomancer"],
+                ):
+                    app = LinuxConsoleApp(
+                        settings_path=settings_path,
+                        class_data_path=class_directory,
+                    )
+                    async with app.run_test() as pilot:
+                        await pilot.pause(0.1)
+                        command_input = app.query_one("#command-input", Input)
+                        command_input.value = "/class Arachnomancer"
+                        await pilot.press("enter")
+                        await pilot.pause()
+                        self.assertEqual(app.selected_class, "Arachnomancer")
+
+                        command_input.value = command
+                        await pilot.press("enter")
+                        await pilot.pause()
+
+                        self.assertFalse(app.is_running)
+                        self.assertIsNone(app.account)
+                        self.assertEqual(app.character_classes, [])
+                        self.assertEqual(app.account_history, [])
+                        self.assertEqual(app.selected_class, "")
+                        self.assertEqual(app.selected_class_data, {})
+                        self.assertTrue(settings_path.exists())
+                        self.assertTrue(class_file.exists())
+                        self.assertEqual(
+                            json.loads(settings_path.read_text(encoding="utf-8"))[
+                                "account"
+                            ],
+                            "Potato Lady",
+                        )
+
+    async def test_ctrl_c_clears_runtime_state_without_deleting_saved_data(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_path = Path(temporary_directory)
+            settings_path = temporary_path / "config.json"
+            class_directory = temporary_path / "classes"
+            save_default_account(settings_path, "Potato Lady")
+            class_file = class_data_path("Arachnomancer", class_directory)
+            load_or_create_class_data("Arachnomancer", class_directory)
+            with patch(
+                "linux_console.app.fetch_classes",
+                return_value=["Arachnomancer"],
+            ):
+                app = LinuxConsoleApp(
+                    settings_path=settings_path,
+                    class_data_path=class_directory,
+                )
+                async with app.run_test() as pilot:
+                    await pilot.pause(0.1)
+                    app.selected_class = "Arachnomancer"
+                    app.selected_class_data = {"skills": []}
+                    await pilot.press("ctrl+c")
+                    await pilot.pause()
+
+                    self.assertFalse(app.is_running)
+                    self.assertIsNone(app.account)
+                    self.assertEqual(app.character_classes, [])
+                    self.assertEqual(app.account_history, [])
+                    self.assertEqual(app.selected_class_data, {})
+                    self.assertTrue(settings_path.exists())
+                    self.assertTrue(class_file.exists())
 
     async def test_char_minus_name_removes_saved_character(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -741,7 +869,14 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                 ]
                 self.assertEqual(
                     command_names,
-                    ["/char", "/reload", "/class", "/return", "/update"],
+                    [
+                        "/char",
+                        "/reload",
+                        "/class",
+                        "/return",
+                        "/update",
+                        "/quit",
+                    ],
                 )
                 command_input.focus()
                 command_input.value = "/update"
@@ -776,17 +911,24 @@ class LinuxConsoleAppTests(unittest.IsolatedAsyncioTestCase):
                     ],
                     ["YES", "NO"],
                 )
-                await pilot.click("#update-yes")
-                await pilot.pause()
-                self.assertIn(
-                    "not configured yet",
-                    str(app.query_one(".update-warning", Static).render()),
-                )
-                await pilot.click("#update-ok")
-                await pilot.pause()
+                with patch(
+                    "linux_console.app.install_latest_release",
+                    side_effect=NoPublishedReleaseError(
+                        "No published GitHub release was found for AQW Helper."
+                    ),
+                ):
+                    await pilot.click("#update-yes")
+                    await pilot.pause(0.2)
                 self.assertEqual(
                     str(app.query_one("#info-session", Static).render()).strip(),
-                    "Commands",
+                    "Update",
+                )
+                self.assertIn(
+                    "No published GitHub release",
+                    " ".join(
+                        str(widget.render())
+                        for widget in app.query("#info-content Static")
+                    ),
                 )
 
                 command_input.focus()

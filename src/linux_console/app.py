@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import re
 from pathlib import Path
+import sys
 from typing import Any
 
 from rich.text import Text
@@ -29,7 +31,11 @@ from linux_console.class_data import (
     class_data_names,
     load_or_create_class_data,
 )
-from linux_console.version_check import update_available
+from linux_console.version_check import current_version, update_available
+from linux_console.release_update import (
+    NoPublishedReleaseError,
+    install_latest_release,
+)
 
 logger = logging.getLogger(__name__)
 COMMANDS = (
@@ -38,10 +44,12 @@ COMMANDS = (
     ("class", "Display any class, owned or not."),
     ("return", "Return to the Commands home page."),
     ("update", "Update the app."),
+    ("quit", "Close the app."),
 )
 COMMAND_ALIASES = {
     "ch": "char",
     "character": "char",
+    "q": "quit",
     "r": "return",
     "rl": "reload",
     "up": "update",
@@ -68,10 +76,24 @@ class LinuxConsoleApp(App[None]):
         color: #d1d5db;
     }
 
+    #header {
+        height: 7;
+    }
+
     #banner {
+        width: 1fr;
         height: 7;
         content-align: left top;
         color: #f4a261;
+    }
+
+    #version-label {
+        width: auto;
+        height: 1;
+        margin-right: 1;
+        color: #f4a261;
+        text-align: right;
+        content-align: right top;
     }
 
     #panels {
@@ -228,17 +250,22 @@ class LinuxConsoleApp(App[None]):
         self._programmatic_completion: str | None = None
         self._character_load_generation = 0
         self._loading_character_generation: int | None = None
+        self.restart_requested = False
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static(
+            yield Horizontal(
+                Static(
                 "  █████╗  ██████╗ ██╗    ██╗    ██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗\n"
                 " ██╔══██╗██╔═══██╗██║    ██║    ██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗\n"
                 " ███████║██║   ██║██║ █╗ ██║    ███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝\n"
                 " ██╔══██║██║▄▄ ██║██║███╗██║    ██╔══██║██╔══╝  ██║     ██╔═══╝ ██╔══╝  ██╔══██╗\n"
                 " ██║  ██║╚██████╔╝╚███╔███╔╝    ██║  ██║███████╗███████╗██║     ███████╗██║  ██║\n"
                 " ╚═╝  ╚═╝ ╚══▀▀═╝  ╚══╝╚══╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝",
-                id="banner",
+                    id="banner",
+                ),
+                Static(f"v.{current_version()}", id="version-label"),
+                id="header",
             )
             with Horizontal(id="panels"):
                 with Vertical(id="info-panel"):
@@ -249,9 +276,9 @@ class LinuxConsoleApp(App[None]):
                         yield Button("Home", id="info-home")
                     yield VerticalScroll(id="info-content")
                     yield Button(
-                        "⟳",
+                        "↓ Update Pending",
                         id="update-available",
-                        tooltip="Update available — type /update",
+                        tooltip="Type /update to install the latest release",
                     )
                 yield ListView(id="class-list")
             yield Input(
@@ -264,6 +291,7 @@ class LinuxConsoleApp(App[None]):
         self.query_one("#info-panel", Vertical).border_title = "Info"
         self.class_list = self.query_one("#class-list", ListView)
         self.class_list.border_title = "Class"
+        await self._clear_runtime_cache()
         self.query_one("#command-input", Input).focus()
         self._set_info_session("Commands")
         self._set_back_enabled(False)
@@ -305,6 +333,23 @@ class LinuxConsoleApp(App[None]):
 
     def action_ignore_quit(self) -> None:
         pass
+
+    async def action_quit(self) -> None:
+        await self._clear_runtime_cache()
+        await super().action_quit()
+
+    async def _clear_runtime_cache(self) -> None:
+        self.account = None
+        self.character_classes.clear()
+        self._clear_selected_class_data()
+        self.account_history.clear()
+        self._completion_cycle = None
+        self._programmatic_completion = None
+        self._character_load_generation += 1
+        self._loading_character_generation = None
+        class_list = self.query_one("#class-list", ListView)
+        class_list.border_title = "Class"
+        await class_list.clear()
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "command-input":
@@ -481,6 +526,11 @@ class LinuxConsoleApp(App[None]):
                 await self._set_info("Usage: return", "#f87171")
             else:
                 await self._show_commands()
+        elif command == "quit":
+            if argument:
+                await self._set_info("Usage: quit", "#f87171")
+            else:
+                await self.action_quit()
 
     async def _load_character(
         self,
@@ -677,7 +727,7 @@ class LinuxConsoleApp(App[None]):
                 if 0 <= index < len(self.account_history):
                     await self._load_character(self.account_history[index])
         elif button_id == "update-yes":
-            await self._show_update_unavailable()
+            await self._start_release_update()
         elif button_id == "update-no" or button_id == "update-ok":
             await self._show_commands()
         elif button_id == "info-back":
@@ -720,18 +770,36 @@ class LinuxConsoleApp(App[None]):
             ),
         )
 
-    async def _show_update_unavailable(self) -> None:
-        await self._clear_info_content()
-        self._set_info_session("Update")
-        self._set_back_enabled(False)
-        self._set_home_enabled(False)
-        await self.query_one("#info-content", VerticalScroll).mount(
-            Static(
-                "Git synchronization is not configured yet.",
-                classes="update-warning",
-            ),
-            Button("OK", id="update-ok", classes="update-choice"),
+    async def _start_release_update(self) -> None:
+        await self._set_info(
+            "Downloading and installing the latest release...",
+            "#f87171",
+            session="Update",
         )
+        self.run_worker(
+            self._install_release_update(),
+            name="install-latest-release",
+            group="release-update",
+            exclusive=True,
+        )
+
+    async def _install_release_update(self) -> None:
+        try:
+            tag = await asyncio.to_thread(install_latest_release, sys.executable)
+        except NoPublishedReleaseError as error:
+            await self._set_info(str(error), "#f87171", session="Update")
+        except (OSError, TimeoutError, UnicodeError, ValueError, RuntimeError) as error:
+            logger.exception("Could not install the latest AQW Helper release")
+            await self._set_info(
+                f"Update failed: {error}",
+                "#f87171",
+                session="Update",
+            )
+        else:
+            logger.info("Release %s installed; restarting AQW Helper", tag)
+            self.restart_requested = True
+            await self._clear_runtime_cache()
+            await super().action_quit()
 
     async def _navigate_back(self) -> None:
         if not self.info_history:
@@ -857,4 +925,10 @@ def main() -> None:
     argparse.ArgumentParser(
         description="Open the Linux Console terminal interface."
     ).parse_args()
-    LinuxConsoleApp().run()
+    app = LinuxConsoleApp()
+    app.run()
+    if app.restart_requested:
+        os.execv(
+            sys.executable,
+            [sys.executable, "-m", "linux_console", *sys.argv[1:]],
+        )

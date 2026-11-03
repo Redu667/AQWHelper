@@ -12,7 +12,11 @@ class UpdateCheckTests(unittest.TestCase):
             return_value=BytesIO(b"1.0"),
         ) as urlopen:
             self.assertFalse(update_available())
-        urlopen.assert_called_once_with(REMOTE_VERSION_URL, timeout=3.0)
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, REMOTE_VERSION_URL)
+        self.assertEqual(request.get_header("Cache-control"), "no-cache")
+        self.assertEqual(request.get_header("Pragma"), "no-cache")
+        urlopen.assert_called_once_with(request, timeout=3.0)
 
         with patch(
             "linux_console.version_check.urlopen",

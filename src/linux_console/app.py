@@ -12,6 +12,7 @@ from typing import Any
 from rich.cells import cell_len
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.events import Click, Key, Resize
 from textual.suggester import Suggester
@@ -56,6 +57,7 @@ COMMANDS = (
     ("return", "Return to the Commands home page."),
     ("update", "Update the app."),
     ("quit", "Close the app."),
+    ("advanced", "Display keyboard shortcuts."),
 )
 COMMAND_ALIASES = {
     "c": "char",
@@ -69,6 +71,7 @@ COMMAND_ALIASES = {
     "classes": "class",
     "enh": "enhancements",
     "st": "stats",
+    "adv": "advanced",
 }
 ENHANCEMENT_COLORS = {
     "Vim": "#86efac",
@@ -86,6 +89,11 @@ ENHANCEMENT_COLORS = {
     "Spellbreaker": "#cd7f32",
     "Hybrid": "#d2b48c",
     "Lucky": "#ff69b4",
+    "Aweblast": "#aec2f9",
+    "Spiral Carve": "#c9f9ae",
+    "Health Vamp": "#f9aeae",
+    "Mana Vamp": "#aeecf9",
+    "Powerword DIE": "#dfaef9",
 }
 DEFAULT_ENHANCEMENT_COLOR = "#f7b176"
 STAT_COLORS = {
@@ -97,12 +105,12 @@ STAT_COLORS = {
     "LUK": ENHANCEMENT_COLORS["Lucky"],
 }
 STAT_DESCRIPTIONS = {
-    "STR": "",
-    "DEX": "",
-    "VIT": "",
-    "INT": "",
-    "WIS": "",
-    "LUK": "",
+    "STR": "Increases Attack Power and Crit Chance\nCaster classes only receive Attack Power",
+    "DEX": "Increases Dodge, Haste and Hit Chance\nCaster classes only receive Dodge",
+    "VIT": "Increases Health by +5 for each point\nBase Health is 2000 at Level 100",
+    "INT": "Increases Haste, Spell Power, Magical Resistance and Magical Damage\nOnly Casters and Full Hybrid classes receive Magical Damage\nMelee classes only receive Spell Power and Magical Resistance",
+    "WIS": "Increases Hit Chance, Crit Chance and Dodge\nMelee and Full Hybrid classes only receive Dodge",
+    "LUK": "Increases Crit Chance, Crit Damage, Hit Chance, Dodge and Haste\nMelee classes receive Attack Power\nCaster classes receive Spell Power\nHybrid classes receive both\nLuck Hybrid classes benefit greatly from LUK",
 }
 
 
@@ -319,7 +327,15 @@ class LinuxConsoleApp(App[None]):
     }
     """
     BINDINGS = [
-        ("ctrl+c", "quit", "Quit"),
+        Binding("ctrl+c", "shortcut_char", show=False, priority=True),
+        Binding("ctrl+r", "shortcut_reload", show=False, priority=True),
+        Binding("ctrl+e", "shortcut_enhancements", show=False, priority=True),
+        Binding("ctrl+s", "shortcut_stats", show=False, priority=True),
+        Binding("ctrl+x", "shortcut_return", show=False, priority=True),
+        Binding("ctrl+u", "shortcut_update", show=False, priority=True),
+        Binding("ctrl+a", "shortcut_advanced", show=False, priority=True),
+        Binding("ctrl+z", "navigate_back", show=False, priority=True),
+        Binding("escape", "quit", show=False, priority=True),
         ("ctrl+q", "ignore_quit", "Ignore quit"),
     ]
 
@@ -444,6 +460,32 @@ class LinuxConsoleApp(App[None]):
 
     def action_ignore_quit(self) -> None:
         pass
+
+    async def action_shortcut_char(self) -> None:
+        await self._submit_shortcut_command("char")
+
+    async def action_shortcut_reload(self) -> None:
+        await self._submit_shortcut_command("reload")
+
+    async def action_shortcut_enhancements(self) -> None:
+        await self._submit_shortcut_command("enhancements")
+
+    async def action_shortcut_stats(self) -> None:
+        await self._submit_shortcut_command("stats")
+
+    async def action_shortcut_return(self) -> None:
+        await self._submit_shortcut_command("return")
+
+    async def action_shortcut_update(self) -> None:
+        await self._submit_shortcut_command("update")
+
+    async def action_shortcut_advanced(self) -> None:
+        await self._submit_shortcut_command("advanced")
+
+    async def _submit_shortcut_command(self, command: str) -> None:
+        command_input = self.query_one("#command-input", Input)
+        command_input.value = f"/{command}"
+        await command_input.action_submit()
 
     async def action_quit(self) -> None:
         await self._clear_runtime_cache()
@@ -638,9 +680,7 @@ class LinuxConsoleApp(App[None]):
             else:
                 await self._load_character(self.account)
         elif command == "class":
-            if not argument:
-                await self._set_info("Usage: class NAME", "#f87171")
-            else:
+            if argument:
                 await self._show_selected_class(argument)
         elif command == "enhancements":
             if argument:
@@ -652,6 +692,11 @@ class LinuxConsoleApp(App[None]):
                 await self._set_info("Usage: stats", "#f87171")
             else:
                 await self._show_stats()
+        elif command == "advanced":
+            if argument:
+                await self._set_info("Usage: advanced", "#f87171")
+            else:
+                await self._show_advanced()
         elif command == "update":
             if argument:
                 await self._set_info("Usage: update", "#f87171")
@@ -893,7 +938,7 @@ class LinuxConsoleApp(App[None]):
         back_start = control_start
         back_end = back_start + cell_len(self._info_back_label)
         if self._info_back_enabled and back_start <= event.x < back_end:
-            await self._navigate_back()
+            await self.action_navigate_back()
         elif self._info_home_enabled:
             home_start = (
                 back_end + cell_len(" | ")
@@ -1022,7 +1067,7 @@ class LinuxConsoleApp(App[None]):
         elif button_id == "update-no" or button_id == "update-ok":
             await self._show_commands()
         elif button_id == "info-back":
-            await self._navigate_back()
+            await self.action_navigate_back()
         elif button_id == "info-home":
             await self._show_commands()
         elif button_id and button_id.startswith("enhancement-"):
@@ -1094,7 +1139,7 @@ class LinuxConsoleApp(App[None]):
             await self._clear_runtime_cache()
             await super().action_quit()
 
-    async def _navigate_back(self) -> None:
+    async def action_navigate_back(self) -> None:
         if not self.info_history:
             await self._show_commands()
             return
@@ -1250,6 +1295,25 @@ class LinuxConsoleApp(App[None]):
                 description,
                 empty_message="No stat details yet.",
             )
+
+    async def _show_advanced(self) -> None:
+        await self._show_catalog_page("Advanced")
+        content = self.query_one("#info-content", VerticalScroll)
+        shortcuts = (
+            ("Ctrl+A", "Show this navigation helper."),
+            ("Ctrl+C", "Display Characters list."),
+            ("Ctrl+E", "Show Enhancements page."),
+            ("Ctrl+R", "Reload the program."),
+            ("Ctrl+S", "Show Stats page."),
+            ("Ctrl+U", "Run Update."),
+            ("Ctrl+X", "Return to Home screen."),
+            ("Ctrl+Z", "Go back to previous screen."),
+            ("Escape", "Close the app."),
+        )
+        for key, description in shortcuts:
+            label = Text(f"{key:<8}", style="#4ade80")
+            label.append(description, style="#d1d5db")
+            await content.mount(Static(label, classes="info-detail"))
 
     async def _show_catalog_page(self, title: str) -> None:
         self._clear_selected_class_data()

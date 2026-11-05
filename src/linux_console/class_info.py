@@ -1,4 +1,4 @@
-from linux_console.class_schema import ClassDef, Mode, Skill, Slot
+from linux_console.class_format import ClassDef, Mode, Skill, Slot
 
 # Add a class by appending a ClassDef entry; only fill what you know.
 #

@@ -6,8 +6,8 @@ from linux_console.aqw import (
     DEFAULT_ENHANCEMENTS,
     ENHANCEMENT_ADDONS,
 )
-from linux_console.class_schema import ClassDef, Mode, Skill, Slot
-from linux_console.classes import CLASSES
+from linux_console.class_format import ClassDef, Mode, Skill, Slot
+from linux_console.class_info import CLASSES
 from linux_console.enhancement_info import (
     ADDON_INFO,
     DEFAULT_INFO,
@@ -134,7 +134,7 @@ def _effective_candidate(
     return {**candidate, "type": base}
 
 
-CLASS_DEFINITIONS_FILE = Path(__file__).with_name("classes.py")
+CLASS_DEFINITIONS_FILE = Path(__file__).with_name("class_info.py")
 SKILL_COUNT = 5
 MIN_PASSIVES = 2
 MAX_PASSIVES = 3

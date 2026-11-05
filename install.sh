@@ -11,9 +11,9 @@ COMMAND_PATH="$BIN_DIR/aqwhelper"
 confirm() {
     local answer
     while true; do
-        printf '%s [y/N] ' "$1" >&2
+        printf '%s [y/n] ' "$1" >&2
         read -r answer || answer=""
-        case "${answer,,}" in
+        case "${answer}" in
             y|yes) return 0 ;;
             ""|n|no) return 1 ;;
             *) printf 'Please answer yes or no.\n' ;;

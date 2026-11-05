@@ -16,6 +16,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.content import Content
 from textual.events import Click, Key, Resize
+from textual.geometry import Size
 from textual.message import Message
 from textual.suggester import Suggester
 from textual.widgets import Button, Input, ListItem, ListView, Static
@@ -170,8 +171,11 @@ class NavButton(Button):
     def watch_mouse_hover(self, hovered: bool) -> None:
         self.refresh()
 
+    def get_content_width(self, container: Size, viewport: Size) -> int:
+        return super().get_content_width(container, viewport) + 2
+
     def render(self) -> Content:
-        marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else ">"
+        marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else " "
         return Content(f"{marker} ") + self.label
 
 
@@ -341,6 +345,11 @@ class LinuxConsoleApp(App[None]):
         content-align: left top;
     }
 
+    #update-choices {
+        width: 1fr;
+        height: auto;
+    }
+
     .update-choice {
         width: auto;
         min-width: 0;
@@ -386,8 +395,8 @@ class LinuxConsoleApp(App[None]):
         color: #F2C16F;
     }
 
-    #class-list > ListItem.selected .class-marker {
-        color: transparent;
+    #class-list > ListItem.selected.-hovered .class-marker {
+        color: #F2C16F;
     }
 
     #class-list.nav-active > ListItem.-highlight .class-marker {
@@ -400,6 +409,11 @@ class LinuxConsoleApp(App[None]):
 
     #class-list.nav-active > ListItem.selected .class-marker {
         color: transparent;
+    }
+
+    #class-list.nav-active > ListItem.selected.-hovered .class-marker,
+    #class-list.nav-active > ListItem.selected.-highlight .class-marker {
+        color: #F2C16F;
     }
 
     #class-list.nav-active > ListItem.selected .class-name {

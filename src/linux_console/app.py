@@ -171,7 +171,7 @@ class NavButton(Button):
         self.refresh()
 
     def render(self) -> Content:
-        marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else " "
+        marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else ">"
         return Content(f"{marker} ") + self.label
 
 

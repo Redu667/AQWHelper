@@ -38,4 +38,11 @@ def update_available(timeout: float = 3.0) -> bool:
     if re.fullmatch(r"\d+(?:\.\d+)*", latest_version) is None:
         raise ValueError("The remote application version is invalid.")
 
-    return latest_version != installed_version
+    return _parse(latest_version) > _parse(installed_version)
+
+
+def _parse(version: str) -> tuple[int, ...]:
+    parts = [int(part) for part in version.split(".")]
+    while len(parts) > 1 and parts[-1] == 0:
+        parts.pop()
+    return tuple(parts)

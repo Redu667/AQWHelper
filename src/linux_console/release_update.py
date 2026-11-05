@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -76,22 +77,26 @@ def _download_and_verify_release(timeout: float = 20.0) -> tuple[str, Path]:
 
     archive_url = f"{ARCHIVE_URL}{quote(tag, safe='')}.zip"
     archive_request = Request(archive_url, headers={"User-Agent": "AQWHelper"})
-    temp_dir = tempfile.TemporaryDirectory(prefix="aqwhelper-update-")
-    archive_path = Path(temp_dir.name) / "release.zip"
+    temp_dir = Path(tempfile.mkdtemp(prefix="aqwhelper-update-"))
+    archive_path = temp_dir / "release.zip"
     size = 0
-    with urlopen(archive_request, timeout=timeout) as response:
-        with archive_path.open("wb") as archive_file:
-            while chunk := response.read(64 * 1024):
-                size += len(chunk)
-                if size > MAX_ARCHIVE_SIZE:
-                    raise ValueError("The release archive exceeds the 50 MiB limit.")
-                archive_file.write(chunk)
+    try:
+        with urlopen(archive_request, timeout=timeout) as response:
+            with archive_path.open("wb") as archive_file:
+                while chunk := response.read(64 * 1024):
+                    size += len(chunk)
+                    if size > MAX_ARCHIVE_SIZE:
+                        raise ValueError("The release archive exceeds the 50 MiB limit.")
+                    archive_file.write(chunk)
 
-    if size == 0 or not zipfile.is_zipfile(archive_path):
-        raise ValueError("GitHub returned an invalid release archive.")
-    with zipfile.ZipFile(archive_path) as archive:
-        if archive.testzip() is not None:
-            raise ValueError("The release archive failed its integrity check.")
+        if size == 0 or not zipfile.is_zipfile(archive_path):
+            raise ValueError("GitHub returned an invalid release archive.")
+        with zipfile.ZipFile(archive_path) as archive:
+            if archive.testzip() is not None:
+                raise ValueError("The release archive failed its integrity check.")
+    except Exception:
+        shutil.rmtree(temp_dir)
+        raise
 
     return tag, archive_path
 
@@ -111,7 +116,10 @@ def install_latest_release(
     if is_windows():
         _install_release_windows(python_executable, archive_path, tag)
     else:
-        _install_release_unix(python_executable, archive_path, tag)
+        try:
+            _install_release_unix(python_executable, archive_path, tag)
+        finally:
+            shutil.rmtree(archive_path.parent)
     
     return tag
 

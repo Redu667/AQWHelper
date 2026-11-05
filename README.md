@@ -9,7 +9,9 @@
 
 ## app.py and aqw.py
 - Where all the dumb code shit happens
+
 Do not mess with it, if you don't know what you doing (frfr)
+
 This is for all the nerds wanting to optimize and make this thing better
 
-If you have any suggestions / bugs / whatever, just go to "Issues" on the top left and create one.
+## If you have any suggestions / bugs / whatever, just go to "Issues" on the top left and create one.

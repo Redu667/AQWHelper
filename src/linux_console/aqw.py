@@ -19,7 +19,7 @@ DEFAULT_ENHANCEMENTS = (
     "Lucky",
 )
 ENHANCEMENT_ADDONS = (
-    "Aweblast",
+    "Awe Blast",
     "Spiral Carve",
     "Mana Vamp",
     "Health Vamp",

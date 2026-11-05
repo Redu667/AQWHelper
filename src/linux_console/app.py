@@ -14,13 +14,16 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.content import Content
 from textual.events import Click, Key, Resize
+from textual.message import Message
 from textual.suggester import Suggester
 from textual.widgets import Button, Input, ListItem, ListView, Static
 
 from linux_console.aqw import (
     AVAILABLE_ENHANCEMENTS,
     DEFAULT_ENHANCEMENTS,
+    ENHANCEMENT_ADDONS,
     TOGGLEABLE_ENHANCEMENTS,
     config_path,
     fetch_classes,
@@ -33,12 +36,10 @@ from linux_console.aqw import (
 from linux_console.class_data import (
     ENHANCEMENT_MODES,
     ENHANCEMENT_SLOTS,
-    class_data_directory,
+    CLASS_DEFINITIONS_FILE,
     class_data_names,
-    enhancement_data_path,
     enhancement_info,
-    load_or_create_enhancement_data,
-    load_or_create_class_data,
+    load_class_data,
     resolve_enhancements,
 )
 from linux_console.version_check import current_version, update_available
@@ -49,15 +50,16 @@ from linux_console.release_update import (
 
 logger = logging.getLogger(__name__)
 COMMANDS = (
-    ("char", "Load and save a character account."),
-    ("reload", "Reload the character's classes."),
-    ("class", "Display any class, owned or not."),
-    ("enhancements", "Display all enhancements."),
-    ("stats", "Display stats details."),
-    ("return", "Return to the Commands home page."),
-    ("update", "Update the app."),
-    ("quit", "Close the app."),
-    ("advanced", "Display keyboard shortcuts."),
+    (" char", "Load and save a character account"),
+    (" reload", "Reload the character's classes"),
+    (" class", "Display any class, owned or not"),
+    (" enhancements", "Display all enhancements"),
+    (" stats", "Display stats details"),
+    (" return", "Return to the Commands home page"),
+    (" navi", "Enter navigation mode"),
+    (" update", "Update the app"),
+    (" quit", "Close the app"),
+    (" advanced", "Display keyboard shortcuts"),
 )
 COMMAND_ALIASES = {
     "c": "char",
@@ -65,6 +67,7 @@ COMMAND_ALIASES = {
     "character": "char",
     "q": "quit",
     "r": "return",
+    "n": "navi",
     "rl": "reload",
     "up": "update",
     "cl": "class",
@@ -78,7 +81,7 @@ ENHANCEMENT_COLORS = {
     "Examen": "#fde68a",
     "Anima": "#fca5a5",
     "Pneuma": "#93c5fd",
-    "Hearty": "#e9a8f4",
+    "Hearty": "#ff69b4",
     "Acheron": "#ffffff",
     "Elysium": "#60a5fa",
     "Dauntless": "#f87171",
@@ -88,29 +91,286 @@ ENHANCEMENT_COLORS = {
     "Healer": "#ffffff",
     "Spellbreaker": "#cd7f32",
     "Hybrid": "#d2b48c",
-    "Lucky": "#ff69b4",
-    "Aweblast": "#aec2f9",
+    "Lucky": "#e9a8f4",
+    "Awe Blast": "#aec2f9",
     "Spiral Carve": "#c9f9ae",
     "Health Vamp": "#f9aeae",
     "Mana Vamp": "#aeecf9",
     "Powerword DIE": "#dfaef9",
 }
 DEFAULT_ENHANCEMENT_COLOR = "#f7b176"
-STAT_COLORS = {
-    "STR": ENHANCEMENT_COLORS["Fighter"],
-    "DEX": ENHANCEMENT_COLORS["Thief"],
-    "VIT": ENHANCEMENT_COLORS["Hearty"],
-    "INT": ENHANCEMENT_COLORS["Wizard"],
-    "WIS": ENHANCEMENT_COLORS["Healer"],
-    "LUK": ENHANCEMENT_COLORS["Lucky"],
+NAV_ACTIONS = (
+    "nav_up",
+    "nav_down",
+    "nav_select",
+    "nav_right",
+    "nav_back",
+    "nav_left",
+    "nav_toggle_pane",
+)
+ENHANCEMENT_GROUPS = (
+    ("Base", DEFAULT_ENHANCEMENTS),
+    ("Weapon - [#aeecf9]Awe[#ffffff]", ENHANCEMENT_ADDONS),
+    ("Weapon - [#f7b176]Forge[#ffffff]", ("Lacerate", "Smite", "Praxis", "Acheron", "Hero's Valiance", "Elysium", "Arcana's Concerto", "Dauntless", "Ravenous",)),
+    ("Helm - [#f7b176]Forge[#ffffff]", ("Forge", "Vim", "Examen", "Anima", "Pneuma", "Hearty")),
+    ("Cape - [#f7b176]Forge[#ffffff]", ("Absolution", "Vainglory", "Avarice", "Lament", "Penitence")),
+)
+CLASS_MODELS = (
+    "Power Melee",
+    "Dodge Melee",
+    "Tank Melee",
+    "Power Caster",
+    "Offensive Caster",
+    "Defensive Caster",
+    "Full Hybrid",
+    "Luck Hybrid",
+)
+CLASS_MODEL_COLORS = {
+    "Power Melee": "#ca7a34",
+    "Dodge Melee": "#78a849",
+    "Tank Melee": "#af4040",
+    "Power Caster": "#76e4f7",
+    "Offensive Caster": "#7694f7",
+    "Defensive Caster": "#8776f7",
+    "Full Hybrid": "#ffa053",
+    "Luck Hybrid": "#ffea7e",
 }
-STAT_DESCRIPTIONS = {
-    "STR": "Increases Attack Power and Crit Chance\nCaster classes only receive Attack Power",
-    "DEX": "Increases Dodge, Haste and Hit Chance\nCaster classes only receive Dodge",
-    "VIT": "Increases Health by +5 for each point\nBase Health is 2000 at Level 100",
-    "INT": "Increases Haste, Spell Power, Magical Resistance and Magical Damage\nOnly Casters and Full Hybrid classes receive Magical Damage\nMelee classes only receive Spell Power and Magical Resistance",
-    "WIS": "Increases Hit Chance, Crit Chance and Dodge\nMelee and Full Hybrid classes only receive Dodge",
-    "LUK": "Increases Crit Chance, Crit Damage, Hit Chance, Dodge and Haste\nMelee classes receive Attack Power\nCaster classes receive Spell Power\nHybrid classes receive both\nLuck Hybrid classes benefit greatly from LUK",
+CLASS_MODEL_DESCRIPTIONS = {
+    "Power Melee": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★★★[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        "\nCrit Chance [#5eff00]↑↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#5eff00]↑↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nAttack Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Dodge Melee": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★★☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#5eff00]↑↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nAttack Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Tank Melee": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★★☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nAttack Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Power Caster": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★★★[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nMagical Boost [#78a849]↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nSpell Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Offensive Caster": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★★★[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nMagical Boost [#78a849]↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nCrit Chance [#5eff00]↑↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nSpell Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Defensive Caster": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★★★[/b #eac43c]"
+        "\nSpell Power [#78a849]↑↑[#ffffff]"
+        "\nHaste [#5eff00]↑↑[#ffffff]"
+        "\nMagical Boost [#78a849]↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nSpell Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Full Hybrid": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★★☆[/b #eac43c]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★★☆[/b #eac43c]"
+        "\nDodge [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★★☆[/b #eac43c]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nMagical Boost [#78a849]↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#5eff00]↑↑[#ffffff]"
+        "\nCritical Chance [#78a849]↑[#ffffff]"
+        "\nAttack Power [#78a849]↑[#ffffff]"
+        "\nSpell Power [#78a849]↑[#ffffff]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
+    "Luck Hybrid": (
+        "[b #fca5a5]STR[/b #fca5a5] [b #eac43c]★★☆[/b #eac43c]"
+        "\nAttack Power [#78a849]↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        
+        "\n\n[b #86efac]DEX[/b #86efac] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #e9a8f4]END[/b #e9a8f4] [b #eac43c]★☆☆[/b #eac43c]"
+        "\nHealth [#78a849]↑[#ffffff]"
+
+        "\n\n[b #93c5fd]INT[/b #93c5fd] [b #eac43c]★★☆[/b #eac43c]"
+        "\nSpell Power [#78a849]↑[#ffffff]"
+        "\nHaste [#78a849]↑[#ffffff]"
+        "\nMagical Boost [#78a849]↑[#ffffff]"
+        "\nMagical Resistance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #fde68a]WIS[/b #fde68a] [b #eac43c]★★★[/b #eac43c]"
+        "\nDodge [#78a849]↑[#ffffff]"
+        "\nCrit Chance [#78a849]↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+
+        "\n\n[b #f7b176]LUK[/b #f7b176] [b #eac43c]★★★[/b #eac43c]"
+        "\nCritical Damage [#78a849]↑[#ffffff]"
+        "\nCritical Chance [#5eff00]↑↑[#ffffff]"
+        "\nAttack Power [#5eff00]↑↑[#ffffff]"
+        "\nSpell Power [#5eff00]↑↑[#ffffff]"
+        "\nDodge [#5eff00]↑↑[#ffffff]"
+        "\nHaste [#5eff00]↑↑[#ffffff]"
+        "\nHit Chance [#78a849]↑[#ffffff]"
+    ),
 }
 
 
@@ -124,16 +384,31 @@ def enhancement_color(name: str) -> str:
     return DEFAULT_ENHANCEMENT_COLOR
 
 
-def style_description_signed_values(description: str) -> Text:
+def style_description(description: str | list[dict[str, str]]) -> Text:
+    if isinstance(description, str):
+        return Text(description)
+
     styled = Text()
-    for segment in re.split(r"(\s+)", description):
-        if segment.startswith("+"):
-            styled.append(segment, style="#86efac")
-        elif segment.startswith("-"):
-            styled.append(segment, style="#fca5a5")
-        else:
-            styled.append(segment)
+    for segment in description:
+        styled.append(segment["text"], style=segment.get("color"))
     return styled
+
+
+class NavButton(Button):
+    """Left-panel button that shows a ">" marker when hovered or under the cursor."""
+
+    class Mounted(Message):
+        pass
+
+    def on_mount(self) -> None:
+        self.post_message(self.Mounted())
+
+    def watch_mouse_hover(self, hovered: bool) -> None:
+        self.refresh()
+
+    def render(self) -> Content:
+        marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else " "
+        return Content(f"{marker} ") + self.label
 
 
 class CommandSuggester(Suggester):
@@ -242,6 +517,37 @@ class LinuxConsoleApp(App[None]):
         content-align: left middle;
     }
 
+    .class-description {
+        padding-bottom: 0;
+    }
+
+    .info-action:hover,
+    .info-action:focus,
+    .info-action.-active,
+    .update-choice:hover,
+    .update-choice:focus,
+    .update-choice.-active,
+    .enhancement-toggle:hover,
+    .enhancement-toggle:focus,
+    .enhancement-toggle.-active {
+        background: transparent;
+        background-tint: transparent;
+        text-style: bold;
+    }
+
+    .info-action:hover,
+    .info-action.nav-cursor,
+    .update-choice:hover,
+    .update-choice.nav-cursor {
+        color: #FFE3B5;
+    }
+
+    .enhancement-group {
+        width: 1fr;
+        height: auto;
+        padding-left: 2;
+    }
+
     .info-detail {
         width: 1fr;
         padding: 0 0 1 0;
@@ -288,6 +594,54 @@ class LinuxConsoleApp(App[None]):
         border: none;
     }
 
+    #class-list > ListItem.-hovered,
+    #class-list > ListItem.-highlight,
+    #class-list > ListItem.selected {
+        background: transparent;
+    }
+
+    .class-row {
+        width: 1fr;
+        height: 1;
+    }
+
+    .class-marker {
+        width: 2;
+        color: transparent;
+    }
+
+    ListItem.-hovered .class-marker {
+        color: #FFE3B5;
+    }
+
+    ListItem.-hovered .class-name {
+        color: #FFE3B5;
+    }
+
+    ListItem.selected .class-name {
+        color: #F2C16F;
+    }
+
+    #class-list > ListItem.selected .class-marker {
+        color: transparent;
+    }
+
+    #class-list.nav-active > ListItem.-highlight .class-marker {
+        color: #FFE3B5;
+    }
+
+    #class-list.nav-active > ListItem.-highlight .class-name {
+        color: #FFE3B5;
+    }
+
+    #class-list.nav-active > ListItem.selected .class-marker {
+        color: transparent;
+    }
+
+    #class-list.nav-active > ListItem.selected .class-name {
+        color: #F2C16F;
+    }
+
     #class-panel {
         width: 1fr;
         height: 1fr;
@@ -296,6 +650,9 @@ class LinuxConsoleApp(App[None]):
         border-title-align: left;
         border-title-color: #38bdf8;
         border-title-background: #050608;
+        border-subtitle-align: center;
+        border-subtitle-color: #38bdf8;
+        border-subtitle-background: #050608;
     }
 
     #enhancements-list {
@@ -316,7 +673,8 @@ class LinuxConsoleApp(App[None]):
     }
 
     .class-name {
-        color: #38bdf8;
+        width: 1fr;
+        color: #98ddfa;
     }
 
     #command-input {
@@ -336,6 +694,20 @@ class LinuxConsoleApp(App[None]):
         Binding("ctrl+a", "shortcut_advanced", show=False, priority=True),
         Binding("ctrl+z", "navigate_back", show=False, priority=True),
         Binding("escape", "quit", show=False, priority=True),
+        Binding("pageup", "scroll_info_up", show=False, priority=True),
+        Binding("pagedown", "scroll_info_down", show=False, priority=True),
+        Binding("ctrl+n", "toggle_navigation", show=False, priority=True),
+        Binding("tab", "nav_toggle_pane", show=False, priority=True),
+        Binding("up", "nav_up", show=False, priority=True),
+        Binding("down", "nav_down", show=False, priority=True),
+        Binding("enter", "nav_select", show=False, priority=True),
+        Binding("right", "nav_right", show=False, priority=True),
+        Binding("left", "nav_left", show=False, priority=True),
+        Binding("backspace", "nav_back", show=False, priority=True),
+        Binding("w", "nav_up", show=False, priority=True),
+        Binding("s", "nav_down", show=False, priority=True),
+        Binding("a", "nav_left", show=False, priority=True),
+        Binding("d", "nav_right", show=False, priority=True),
         ("ctrl+q", "ignore_quit", "Ignore quit"),
     ]
 
@@ -343,11 +715,10 @@ class LinuxConsoleApp(App[None]):
         self,
         *,
         settings_path: Path | None = None,
-        class_data_path: Path | None = None,
+        data_directory: Path | None = None,
     ) -> None:
         super().__init__()
         self.settings_path = settings_path or config_path()
-        self.class_data_path = class_data_path or class_data_directory()
         self.account: str | None = None
         self.character_classes: list[str] = []
         self.selected_enhancements = set(TOGGLEABLE_ENHANCEMENTS)
@@ -362,14 +733,17 @@ class LinuxConsoleApp(App[None]):
         self._character_load_generation = 0
         self._loading_character_generation: int | None = None
         self.restart_requested = False
+        self.nav_mode = False
+        self.nav_pane = "right"
+        self._nav_button: NavButton | None = None
+        self.nav_header = False
+        self.nav_header_item = "classes"
+        self.nav_tab = "classes"
+        self.enh_index = 0
         self._info_back_enabled = False
         self._info_home_enabled = False
         self._info_back_label = "← Back"
         self._info_panel_title = "Info"
-        self.enhancement_data: dict[str, Any] = {}
-        self.enhancement_data_file = enhancement_data_path(
-            self.class_data_path.parent if class_data_path is not None else None
-        )
 
     def compose(self) -> ComposeResult:
         with Vertical(id="main-ui"):
@@ -406,18 +780,6 @@ class LinuxConsoleApp(App[None]):
             )
 
     async def on_mount(self) -> None:
-        try:
-            (
-                self.enhancement_data,
-                self.enhancement_data_file,
-            ) = load_or_create_enhancement_data(self.enhancement_data_file)
-        except (OSError, ValueError) as error:
-            await self._set_info(
-                f"Could not load enhancement information: {error}",
-                "#f87171",
-            )
-            return
-
         self.class_list = self.query_one("#class-list", ListView)
         await self._populate_enhancements()
         await self._clear_runtime_cache()
@@ -583,7 +945,7 @@ class LinuxConsoleApp(App[None]):
             if not candidates:
                 candidates = ["CHAR"]
         else:
-            candidates = class_data_names(self.class_data_path)
+            candidates = class_data_names()
         if typed:
             candidates = [
                 candidate
@@ -609,7 +971,7 @@ class LinuxConsoleApp(App[None]):
         token = value.lstrip()
         has_leading_slash = token.startswith("/")
         command_prefix = token.lstrip("/")
-        command_names = [command for command, _ in COMMANDS]
+        command_names = [command.strip() for command, _ in COMMANDS]
         for command in command_names:
             if command.casefold().startswith(command_prefix.casefold()):
                 suggestion = f"/{command}" if has_leading_slash else command
@@ -707,6 +1069,11 @@ class LinuxConsoleApp(App[None]):
                 await self._set_info("Usage: return", "#f87171")
             else:
                 await self._show_commands()
+        elif command == "navi":
+            if argument:
+                await self._set_info("Usage: navi", "#f87171")
+            else:
+                self._set_nav_mode(True)
         elif command == "quit":
             if argument:
                 await self._set_info("Usage: quit", "#f87171")
@@ -812,7 +1179,14 @@ class LinuxConsoleApp(App[None]):
         self._loading_character_generation = None
         if self.character_classes:
             await class_list.extend(
-                ListItem(Static(name, classes="class-name"))
+                ListItem(
+                    Horizontal(
+                        Static(">", classes="class-marker"),
+                        Static(name, classes="class-name"),
+                        classes="class-row",
+                    ),
+                    classes="class-list-item",
+                )
                 for name in self.character_classes
             )
 
@@ -838,7 +1212,12 @@ class LinuxConsoleApp(App[None]):
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index
         if index is not None and 0 <= index < len(self.character_classes):
+            for item in event.list_view.children:
+                item.remove_class("selected")
+            event.list_view.children[index].add_class("selected")
             await self._show_selected_class(self.character_classes[index])
+            if self.nav_mode:
+                self._set_nav_pane("left")
 
     async def _toggle_enhancement(self, button: Button) -> None:
         if self.account is None or button.id is None:
@@ -893,7 +1272,7 @@ class LinuxConsoleApp(App[None]):
         )
 
     def _create_enhancement_button(self, index: int, name: str) -> Button:
-        button = Button(
+        button = NavButton(
             f"{'■' if name in self.selected_enhancements else '□'} {name}",
             id=f"enhancement-{index}",
             classes="enhancement-toggle",
@@ -902,29 +1281,48 @@ class LinuxConsoleApp(App[None]):
         return button
 
     def _show_classes_tab(self) -> None:
+        self.nav_tab = "classes"
         self.query_one("#class-list", ListView).display = True
         self.query_one("#enhancements-list", VerticalScroll).display = False
-        title = Text()
-        title.append("Classes", style="bold underline")
-        title.append(" ─ ", style="#38bdf8")
-        title.append("Enhancements", style="#38bdf8")
-        self.query_one("#class-panel", Vertical).border_title = title
+        self._render_tab_title()
+        self._sync_nav_cursor()
 
     def _show_enhancements_tab(self) -> None:
+        self.nav_tab = "enhancements"
         self.query_one("#class-list", ListView).display = False
         self.query_one("#enhancements-list", VerticalScroll).display = True
+        self._render_tab_title()
+        self._sync_nav_cursor()
+
+    def _render_tab_title(self) -> None:
+        self.query_one("#class-panel", Vertical).border_title = self._tab_title()
+
+    def _tab_title(self) -> Text:
         title = Text()
-        title.append("Classes", style="#38bdf8")
-        title.append(" ─ ", style="#38bdf8")
-        title.append("Enhancements", style="bold underline")
-        self.query_one("#class-panel", Vertical).border_title = title
+        for name, label in (("classes", "Classes"), ("enhancements", "Enhancements")):
+            if name == "enhancements":
+                title.append(" ─ ", style="#38bdf8")
+            if self.nav_mode and self.nav_header and self.nav_header_item == name:
+                title.append("> ", style="#FFE3B5")
+            active = self.nav_tab == name
+            title.append(label, style="bold underline" if active else "#38bdf8")
+        return title
+
+    def _tab_at(self, x: int) -> str | None:
+        plain = self._tab_title().plain
+        for name, label in (("classes", "Classes"), ("enhancements", "Enhancements")):
+            start = plain.find(label) + 2
+            if start - 2 >= 0 and start <= x < start + len(label):
+                return name
+        return None
 
     async def on_click(self, event: Click) -> None:
         class_panel = self.query_one("#class-panel", Vertical)
         if event.widget is class_panel and event.y == 0:
-            if 2 <= event.x < 9:
+            tab = self._tab_at(event.x)
+            if tab == "classes":
                 self._show_classes_tab()
-            elif 12 <= event.x < 24:
+            elif tab == "enhancements":
                 self._show_enhancements_tab()
             return
 
@@ -955,12 +1353,7 @@ class LinuxConsoleApp(App[None]):
     async def _show_selected_class(self, class_name: str) -> None:
         self._clear_selected_class_data()
         try:
-            data, path = load_or_create_class_data(
-                class_name,
-                self.class_data_path,
-                self.enhancement_data,
-                self.enhancement_data_file,
-            )
+            data = load_class_data(class_name)
         except (OSError, ValueError) as error:
             await self._set_info(
                 f"Could not load class data: {error}",
@@ -971,12 +1364,19 @@ class LinuxConsoleApp(App[None]):
 
         self.selected_class = class_name
         self.selected_class_data = data
-        self.selected_class_file = path
+        self._show_class_model_subtitle(data.get("model", ""))
+        self.selected_class_file = CLASS_DEFINITIONS_FILE
         self.info_history = []
         self.detail_counter = 0
         await self._show_class_sections()
 
+    def _show_class_model_subtitle(self, model: str) -> None:
+        panel = self.query_one("#info-panel", Vertical)
+        panel.border_subtitle = Text(model, style="#4ade80") if model else ""
+        panel.styles.border_subtitle_align = "center"
+
     def _clear_selected_class_data(self) -> None:
+        self._show_class_model_subtitle("")
         self.selected_class = ""
         self.selected_class_data = {}
         self.selected_class_file = Path()
@@ -1015,7 +1415,7 @@ class LinuxConsoleApp(App[None]):
         content = self.query_one("#info-content", VerticalScroll)
         command_width = max(len(command) for command, _ in COMMANDS) + 1
         for command, description in COMMANDS:
-            label = Text(f"/{command:<{command_width}}", style="#4ade80")
+            label = Text(f"{command:<{command_width}}", style="#4ade80")
             label.append(description, style="#d1d5db")
             await content.mount(Static(label, classes="info-detail"))
         if status:
@@ -1029,8 +1429,10 @@ class LinuxConsoleApp(App[None]):
         content = self.query_one("#info-content", VerticalScroll)
         await content.mount(
             Static(
-                "Using '/char -' will remove the character\n"
-                "Example: 'char -Potato Lady'\n",
+                "Using '/char name' will add a character\n"
+                "Example: 'c Potato Lady'\n\n"
+                "Using '/char -name' will remove the character\n"
+                "Example: 'c -Potato Lady'\n",
                 classes="update-warning",
             )
         )
@@ -1047,7 +1449,7 @@ class LinuxConsoleApp(App[None]):
 
         for index, account in enumerate(self.account_history):
             await content.mount(
-                Button(
+                NavButton(
                     account,
                     id=f"saved-character-{index}",
                     classes="info-action",
@@ -1083,10 +1485,19 @@ class LinuxConsoleApp(App[None]):
         elif button_id == "nav-skills":
             self.info_history.append("Class")
             await self._show_skills()
+        elif button_id and button_id.startswith("class-model-"):
+            index = int(button_id.removeprefix("class-model-"))
+            model = CLASS_MODELS[index]
+            self.info_history.append("Class Models")
+            await self._show_class_model(model)
         elif button_id and button_id.startswith("nav-mode-"):
             mode = button_id.removeprefix("nav-mode-")
             self.info_history.append("Enhancements")
             await self._show_enhancement_mode(mode)
+        elif button_id and button_id.startswith("group-"):
+            body = self.query_one(f"#{button_id}-body", Vertical)
+            body.display = not body.display
+            self._sync_nav_cursor()
         elif button_id and button_id.startswith("detail-"):
             self._toggle_detail(button_id)
 
@@ -1102,8 +1513,8 @@ class LinuxConsoleApp(App[None]):
                 classes="update-warning",
             ),
             Horizontal(
-                Button("YES", id="update-yes", classes="update-choice"),
-                Button("NO", id="update-no", classes="update-choice"),
+                NavButton("YES", id="update-yes", classes="update-choice"),
+                NavButton("NO", id="update-no", classes="update-choice"),
                 id="update-choices",
             ),
         )
@@ -1139,6 +1550,194 @@ class LinuxConsoleApp(App[None]):
             await self._clear_runtime_cache()
             await super().action_quit()
 
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action in NAV_ACTIONS:
+            return self.nav_mode
+        return True
+
+    def action_toggle_navigation(self) -> None:
+        self._set_nav_mode(not self.nav_mode)
+
+    def _set_nav_mode(self, enabled: bool) -> None:
+        self.nav_mode = enabled
+        command_input = self.query_one("#command-input", Input)
+        class_list = self.query_one("#class-list", ListView)
+        self.query_one("#class-panel", Vertical).border_subtitle = (
+            "Ctrl + N to disable" if enabled else ""
+        )
+        command_input.disabled = enabled
+        self.nav_header = False
+        if enabled:
+            if class_list.index is None and class_list.children:
+                class_list.index = 0
+            self.set_focus(None)
+            has_right = bool(class_list.children) or self.nav_tab == "enhancements"
+            self._set_nav_pane("right" if has_right else "left")
+        else:
+            self._set_nav_pane(self.nav_pane)
+            command_input.focus()
+        self._render_tab_title()
+
+    def _set_nav_pane(self, pane: str) -> None:
+        self.nav_pane = pane
+        self._sync_nav_cursor()
+
+    def action_nav_toggle_pane(self) -> None:
+        class_list = self.query_one("#class-list", ListView)
+        has_right = bool(class_list.children) or self.nav_tab == "enhancements"
+        if self.nav_pane == "right" or not has_right:
+            self._set_nav_pane("left")
+        else:
+            self._set_nav_pane("right")
+
+    def _nav_buttons(self) -> list[NavButton]:
+        content = self.query_one("#info-content", VerticalScroll)
+        return [
+            button
+            for button in content.query(NavButton)
+            if button.display
+            and all(
+                ancestor.display
+                for ancestor in button.ancestors
+                if ancestor is not content and content in ancestor.ancestors
+            )
+        ]
+
+    def _enhancement_buttons(self) -> list[NavButton]:
+        return list(self.query_one("#enhancements-list", VerticalScroll).query(NavButton))
+
+    def _sync_nav_cursor(self) -> None:
+        class_list = self.query_one("#class-list", ListView)
+        right_active = self.nav_mode and self.nav_pane == "right"
+        class_list.set_class(right_active and not self.nav_header, "nav-active")
+        enh_buttons = self._enhancement_buttons()
+        self.enh_index = max(0, min(self.enh_index, len(enh_buttons) - 1))
+        show_enh = right_active and not self.nav_header and self.nav_tab == "enhancements"
+        for position, button in enumerate(enh_buttons):
+            button.set_class(show_enh and position == self.enh_index, "nav-cursor")
+            button.refresh()
+        if show_enh and enh_buttons:
+            enh_buttons[self.enh_index].scroll_visible()
+        self._render_tab_title()
+        buttons = self._nav_buttons()
+        if self._nav_button not in buttons:
+            self._nav_button = buttons[0] if buttons else None
+        show_cursor = self.nav_mode and self.nav_pane == "left"
+        for button in self.query_one("#info-content", VerticalScroll).query(NavButton):
+            button.set_class(show_cursor and button is self._nav_button, "nav-cursor")
+            button.refresh()
+        if show_cursor and self._nav_button is not None:
+            self._nav_button.scroll_visible()
+
+    def on_nav_button_mounted(self, event: NavButton.Mounted) -> None:
+        self.call_after_refresh(self._sync_nav_cursor)
+
+    def _move_nav_button(self, step: int) -> None:
+        buttons = self._nav_buttons()
+        if not buttons:
+            return
+        current = buttons.index(self._nav_button) if self._nav_button in buttons else 0
+        self._nav_button = buttons[max(0, min(len(buttons) - 1, current + step))]
+        self._sync_nav_cursor()
+
+    def _move_right_cursor(self, step: int) -> None:
+        if self.nav_header:
+            if step > 0:
+                self.nav_header = False
+        elif self.nav_tab == "enhancements":
+            if step < 0 and self.enh_index <= 0:
+                self.nav_header = True
+                self.nav_header_item = "enhancements"
+            else:
+                self.enh_index = max(0, self.enh_index + step)
+        else:
+            class_list = self.query_one("#class-list", ListView)
+            if step < 0 and (class_list.index or 0) <= 0:
+                self.nav_header = True
+                self.nav_header_item = "classes"
+            elif step < 0:
+                class_list.action_cursor_up()
+            else:
+                class_list.action_cursor_down()
+        self._sync_nav_cursor()
+
+    def action_nav_up(self) -> None:
+        if self.nav_pane == "right":
+            self._move_right_cursor(-1)
+        else:
+            self._move_nav_button(-1)
+
+    def action_nav_down(self) -> None:
+        if self.nav_pane == "right":
+            self._move_right_cursor(1)
+        else:
+            self._move_nav_button(1)
+
+    def action_nav_select(self) -> None:
+        if self.nav_pane == "right":
+            if self.nav_header:
+                self.nav_header = False
+                if self.nav_header_item == "enhancements":
+                    self.enh_index = 0
+                    self._show_enhancements_tab()
+                else:
+                    self._show_classes_tab()
+            elif self.nav_tab == "enhancements":
+                buttons = self._enhancement_buttons()
+                if buttons:
+                    buttons[self.enh_index].press()
+            else:
+                self.query_one("#class-list", ListView).action_select_cursor()
+        elif self._nav_button is not None:
+            self._nav_button.press()
+
+    def _on_nav_header(self) -> bool:
+        return self.nav_pane == "right" and self.nav_header
+
+    def action_nav_right(self) -> None:
+        if self._on_nav_header():
+            self.nav_header_item = "enhancements"
+            self._sync_nav_cursor()
+        else:
+            self.action_nav_select()
+
+    async def action_nav_left(self) -> None:
+        if self._on_nav_header():
+            self.nav_header_item = "classes"
+            self._sync_nav_cursor()
+        else:
+            await self.action_nav_back()
+
+    async def action_nav_back(self) -> None:
+        await self.action_navigate_back()
+
+    def _page_class_list(self, direction: int) -> None:
+        if self.nav_tab == "enhancements":
+            count = len(self._enhancement_buttons())
+            height = self.query_one("#enhancements-list", VerticalScroll).size.height
+            self.enh_index = max(0, min(count - 1, self.enh_index + direction * max(1, height)))
+            self._sync_nav_cursor()
+            return
+        class_list = self.query_one("#class-list", ListView)
+        count = len(class_list.children)
+        if not count:
+            return
+        step = max(1, class_list.size.height)
+        current = class_list.index or 0
+        class_list.index = max(0, min(count - 1, current + direction * step))
+
+    def action_scroll_info_up(self) -> None:
+        if self.nav_mode and self.nav_pane == "right":
+            self._page_class_list(-1)
+            return
+        self.query_one("#info-content", VerticalScroll).scroll_page_up()
+
+    def action_scroll_info_down(self) -> None:
+        if self.nav_mode and self.nav_pane == "right":
+            self._page_class_list(1)
+            return
+        self.query_one("#info-content", VerticalScroll).scroll_page_down()
+
     async def action_navigate_back(self) -> None:
         if not self.info_history:
             await self._show_commands()
@@ -1149,6 +1748,8 @@ class LinuxConsoleApp(App[None]):
             await self._show_class_sections()
         elif previous == "Enhancements":
             await self._show_enhancement_modes()
+        elif previous == "Class Models":
+            await self._show_stats()
 
     def _set_info_session(self, session: str) -> None:
         self._info_panel_title = session
@@ -1204,6 +1805,16 @@ class LinuxConsoleApp(App[None]):
     async def _clear_info_content(self) -> None:
         await self.query_one("#info-content", VerticalScroll).remove_children()
 
+    async def _mount_class_description(self, content: VerticalScroll) -> None:
+        description = self.selected_class_data.get("description")
+        if description:
+            await content.mount(
+                Static(
+                    style_description(description),
+                    classes="info-detail class-description",
+                ),
+            )
+
     async def _show_class_sections(self) -> None:
         self.query_one("#info-panel", Vertical).styles.border = (
             "round",
@@ -1214,21 +1825,23 @@ class LinuxConsoleApp(App[None]):
         self._set_home_enabled(True)
         await self._clear_info_content()
         content = self.query_one("#info-content", VerticalScroll)
+        await self._mount_class_description(content)
         await content.mount(
-            Button("Enhancements", id="nav-enhancements", classes="info-action"),
-            Button("Skills", id="nav-skills", classes="info-action"),
+            NavButton("Enhancements", id="nav-enhancements", classes="info-action"),
+            NavButton("Skills", id="nav-skills", classes="info-action"),
         )
 
     async def _show_enhancement_modes(self) -> None:
         await self._clear_info_content()
-        self._set_info_session("Enhancements")
+        self._set_info_session(self.selected_class)
         self._set_back_label("Back")
         self._set_back_enabled(True)
         self._set_home_enabled(True)
         content = self.query_one("#info-content", VerticalScroll)
+        await self._mount_class_description(content)
         await content.mount(
             *(
-                Button(
+                NavButton(
                     mode,
                     id=f"nav-mode-{mode}",
                     classes="info-action",
@@ -1239,7 +1852,7 @@ class LinuxConsoleApp(App[None]):
 
     async def _show_enhancement_mode(self, mode: str) -> None:
         await self._clear_info_content()
-        self._set_info_session(mode)
+        self._set_info_session(self.selected_class)
         self._set_back_label("Back")
         self._set_back_enabled(True)
         self._set_home_enabled(True)
@@ -1259,7 +1872,7 @@ class LinuxConsoleApp(App[None]):
                 await self._mount_detail(
                     content,
                     label,
-                    enhancement_info(self.enhancement_data, field["type"].strip()),
+                    enhancement_info(field["type"].strip()),
                     detail_class="info-detail enhancement-info-detail",
                 )
             await content.mount(Static("", classes="enhancement-spacer"))
@@ -1276,39 +1889,62 @@ class LinuxConsoleApp(App[None]):
     async def _show_enhancement_catalog(self) -> None:
         await self._show_catalog_page("Enhancements")
         content = self.query_one("#info-content", VerticalScroll)
-        names = (*DEFAULT_ENHANCEMENTS, *AVAILABLE_ENHANCEMENTS)
-        for name in names:
-            await self._mount_detail(
-                content,
-                Text(name, style=enhancement_color(name)),
-                enhancement_info(self.enhancement_data, name),
-                empty_message="No enhancement details yet.",
+        for index, (group, names) in enumerate(ENHANCEMENT_GROUPS):
+            group_id = f"group-{index}"
+            body = Vertical(id=f"{group_id}-body", classes="enhancement-group")
+            await content.mount(
+                NavButton(group, id=group_id, classes="info-action group-toggle"),
+                body,
             )
+            body.display = False
+            for name in names:
+                await self._mount_detail(
+                    body,
+                    Text(name, style=enhancement_color(name)),
+                    enhancement_info(name),
+                    empty_message="No enhancement details yet.",
+                )
 
     async def _show_stats(self) -> None:
-        await self._show_catalog_page("Stats")
+        await self._show_catalog_page("Stats - Class Models")
         content = self.query_one("#info-content", VerticalScroll)
-        for name, description in STAT_DESCRIPTIONS.items():
-            await self._mount_detail(
-                content,
-                Text(name, style=STAT_COLORS[name]),
-                description,
-                empty_message="No stat details yet.",
+        for index, name in enumerate(CLASS_MODELS):
+            await content.mount(
+                NavButton(
+                    Text(name, style=CLASS_MODEL_COLORS[name]),
+                    id=f"class-model-{index}",
+                    classes="info-action",
+                )
             )
+
+    async def _show_class_model(self, name: str) -> None:
+        await self._clear_info_content()
+        self._set_info_session(f"Stats - {name}")
+        self._set_back_label("Back")
+        self._set_back_enabled(True)
+        self._set_home_enabled(True)
+        description = CLASS_MODEL_DESCRIPTIONS[name] or "No description yet."
+        await self.query_one("#info-content", VerticalScroll).mount(
+            Static(description, classes="info-detail")
+        )
 
     async def _show_advanced(self) -> None:
         await self._show_catalog_page("Advanced")
         content = self.query_one("#info-content", VerticalScroll)
         shortcuts = (
-            ("Ctrl+A", "Show this navigation helper."),
-            ("Ctrl+C", "Display Characters list."),
-            ("Ctrl+E", "Show Enhancements page."),
-            ("Ctrl+R", "Reload the program."),
-            ("Ctrl+S", "Show Stats page."),
-            ("Ctrl+U", "Run Update."),
-            ("Ctrl+X", "Return to Home screen."),
-            ("Ctrl+Z", "Go back to previous screen."),
-            ("Escape", "Close the app."),
+            ("  Ctrl+A  ", "Show this navigation helper"),
+            ("  Ctrl+C  ", "Display Characters list"),
+            ("  Ctrl+E  ", "Show Enhancements page"),
+            ("  Ctrl+R  ", "Reload the program"),
+            ("  Ctrl+S  ", "Show Stats page"),
+            ("  Ctrl+U  ", "Run Update"),
+            ("  Ctrl+X  ", "Return to Home screen"),
+            ("  Ctrl+Z  ", "Go back to previous screen"),
+            ("  Ctrl+N  ", "Toggle Navigation mode"),
+            ("  Tab     ", "Swap windows (Navigation)"),
+            ("  PgUp    ", "Scroll the panel up"),
+            ("  PgDn    ", "Scroll the panel down"),
+            ("  Escape  ", "Close the app"),
         )
         for key, description in shortcuts:
             label = Text(f"{key:<8}", style="#4ade80")
@@ -1330,29 +1966,29 @@ class LinuxConsoleApp(App[None]):
 
     async def _show_skills(self) -> None:
         await self._clear_info_content()
-        self._set_info_session("Skills")
+        self._set_info_session(self.selected_class)
         self._set_back_label("Back")
         self._set_back_enabled(True)
         self._set_home_enabled(True)
         content = self.query_one("#info-content", VerticalScroll)
         for number, skill in enumerate(self.selected_class_data["skills"], start=1):
             name = skill["name"].strip() or f"Skill {number}"
-            await self._mount_detail(content, name, skill["info"].strip())
+            await self._mount_detail(content, name, skill["info"])
 
         for number, passive in enumerate(
             self.selected_class_data["passives"], start=1
         ):
-            has_value = bool(passive["name"].strip() or passive["info"].strip())
+            has_value = bool(passive["name"].strip() or passive["info"])
             name = passive["name"].strip() or f"Passive {number}"
-            details = passive["info"].strip()
+            details = passive["info"]
             if number <= 2 or has_value:
                 await self._mount_detail(content, name, details)
 
     async def _mount_detail(
         self,
-        content: VerticalScroll,
+        content: Vertical | VerticalScroll,
         label: str | Text,
-        details: str,
+        details: str | list[dict[str, str]],
         *,
         empty_message: str | None = None,
         detail_class: str = "info-detail",
@@ -1363,9 +1999,9 @@ class LinuxConsoleApp(App[None]):
             f"No details yet. Edit {self.selected_class_file}."
         )
         await content.mount(
-            Button(label, id=button_id, classes="info-action detail-toggle"),
+            NavButton(label, id=button_id, classes="info-action detail-toggle"),
             Static(
-                style_description_signed_values(detail),
+                style_description(detail),
                 classes=detail_class,
                 id=f"{button_id}-text",
             ),
@@ -1375,6 +2011,7 @@ class LinuxConsoleApp(App[None]):
     def _toggle_detail(self, button_id: str) -> None:
         detail = self.query_one(f"#{button_id}-text", Static)
         detail.display = not detail.display
+        self._sync_nav_cursor()
 
 
 def main() -> None:

@@ -1,9 +1,4 @@
-import hashlib
-import json
-import os
-import re
 from pathlib import Path
-import sysconfig
 from typing import Any
 
 from linux_console.aqw import (
@@ -11,377 +6,72 @@ from linux_console.aqw import (
     DEFAULT_ENHANCEMENTS,
     ENHANCEMENT_ADDONS,
 )
+from linux_console.class_schema import ClassDef, Mode, Skill, Slot
+from linux_console.classes import CLASSES
+from linux_console.enhancement_info import (
+    ADDON_INFO,
+    DEFAULT_INFO,
+    ENHANCEMENT_INFO,
+)
 
 
 ENHANCEMENT_MODES = ("Base", "Solo", "Group", "Special")
 ENHANCEMENT_SLOTS = ("Class", "Helm", "Weapon", "Cape")
 ENHANCEMENT_OPTIONS = ("best", "alternative")
 POTION_TYPES = ("Tonic", "Elixir", "Potion")
-ENHANCEMENT_DATA_SECTIONS = ("enhancements", "defaults", "addons")
+DESCRIPTION_COLORS = frozenset(
+    {"red", "green", "yellow", "blue", "magenta", "cyan", "white"}
+)
 
 
-def class_data_directory() -> Path:
-    data_home = Path(
-        os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
-    )
-    return data_home / "aqw-helper" / "classes"
+def _validate_description(value: Any, field: str) -> list[dict[str, str]]:
+    if isinstance(value, str):
+        return [{"text": value}] if value else []
+    if not isinstance(value, list):
+        raise ValueError(f"{field} must be text or a list of text/color objects.")
 
-
-def class_template_directory() -> Path:
-    return Path(__file__).parent / "class_templates"
-
-
-def enhancement_data_path(data_directory: Path | None = None) -> Path:
-    if data_directory is not None:
-        return data_directory / "enhancements.json"
-
-    source_catalog = (
-        Path(__file__).resolve().parents[2] / "templates" / "enhancements.json"
-    )
-    if source_catalog.is_file():
-        return source_catalog
-    return (
-        Path(sysconfig.get_path("data"))
-        / "share"
-        / "aqw-helper"
-        / "enhancements.json"
-    )
-
-
-def class_data_path(class_name: str, directory: Path | None = None) -> Path:
-    normalized_name = class_name.strip()
-    slug = re.sub(r"[^A-Za-z0-9]+", "_", normalized_name).strip("_")
-    slug = slug[:80] or "class"
-    return (directory or class_data_directory()) / f"{slug}.json"
-
-
-def _legacy_class_data_paths(
-    class_name: str,
-    directory: Path,
-) -> tuple[Path, ...]:
-    normalized_name = class_name.strip()
-    digest = hashlib.sha256(normalized_name.casefold().encode("utf-8")).hexdigest()[:8]
-    kebab_slug = re.sub(r"[^a-z0-9]+", "-", normalized_name.casefold()).strip("-")
-    underscored_slug = re.sub(r"[^A-Za-z0-9]+", "_", normalized_name).strip("_")
-    return (
-        directory / f"{(kebab_slug[:80] or 'class')}-{digest}.json",
-        directory / f"{(underscored_slug[:80] or 'class')}_{digest}.json",
-    )
-
-
-def class_data_names(directory: Path | None = None) -> list[str]:
-    data_directory = directory or class_data_directory()
-    names: list[str] = []
-    seen: set[str] = set()
-    for path in data_directory.glob("*.json"):
-        try:
-            data: Any = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not isinstance(data, dict):
-            continue
-        name = data.get("class_name")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        normalized = name.strip()
-        folded = normalized.casefold()
-        if folded != "template" and folded not in seen:
-            names.append(normalized)
-            seen.add(folded)
-    return sorted(names, key=str.casefold)
-
-
-def _template(class_name: str) -> dict[str, Any]:
-    return {
-        "class_name": class_name,
-        "enhancements": {
-            mode: {
-                **{
-                    slot: {
-                        "best": {"type": ""},
-                        "alternative": {
-                            "type": "",
-                            "base": {"type": "Type"},
-                        },
-                    }
-                    for slot in ENHANCEMENT_SLOTS
-                },
-                "Potions": {potion: "" for potion in POTION_TYPES},
-            }
-            for mode in ENHANCEMENT_MODES
-        },
-        "skills": [
-            {"name": "", "info": ""} for _ in range(5)
-        ],
-        "passives": [
-            {"name": "", "info": ""}
-            for _ in range(2)
-        ],
-    }
-
-
-def _merge_class_defaults(defaults: Any, overrides: Any) -> Any:
-    if isinstance(defaults, dict) and isinstance(overrides, dict):
-        return {
-            key: _merge_class_defaults(defaults.get(key), overrides.get(key))
-            for key in defaults.keys() | overrides.keys()
-        }
-    if isinstance(defaults, list) and isinstance(overrides, list):
-        return [
-            _merge_class_defaults(
-                defaults[index] if index < len(defaults) else None,
-                overrides[index] if index < len(overrides) else None,
-            )
-            for index in range(max(len(defaults), len(overrides)))
-        ]
-    if isinstance(defaults, str) and isinstance(overrides, str):
-        return defaults if not overrides.strip() or overrides.strip() == "Type" else overrides
-    return overrides if overrides is not None else defaults
-
-
-def _enhancement_data_template() -> dict[str, Any]:
-    return {
-        "enhancements": {
-            name: {"info": ""}
-            for name in AVAILABLE_ENHANCEMENTS
-            if name not in ENHANCEMENT_ADDONS
-        },
-        "defaults": {name: {"info": ""} for name in DEFAULT_ENHANCEMENTS},
-        "addons": {name: {"info": ""} for name in ENHANCEMENT_ADDONS},
-    }
-
-
-def _validate_enhancement_data(data: Any) -> dict[str, Any]:
-    if not isinstance(data, dict):
-        raise ValueError("Enhancement data must be a JSON object.")
-
-    template = _enhancement_data_template()
-    result: dict[str, Any] = {}
-    for section in ENHANCEMENT_DATA_SECTIONS:
-        section_data = data.get(section)
-        if not isinstance(section_data, dict):
-            raise ValueError(f"Enhancement data must include a '{section}' object.")
-        expected_names = template[section]
-        if set(section_data) != set(expected_names):
-            raise ValueError(
-                f"Enhancement data '{section}' must contain exactly the "
-                "supported names."
-            )
-        result[section] = {}
-        for name in expected_names:
-            entry = section_data[name]
-            if not isinstance(entry, dict) or not isinstance(
-                entry.get("info"), str
-            ):
-                raise ValueError(f"{section}.{name}.info must be text.")
-            result[section][name] = {"info": entry["info"]}
-    return result
-
-
-def load_or_create_enhancement_data(
-    path: Path | None = None,
-) -> tuple[dict[str, Any], Path]:
-    data_path = path or enhancement_data_path()
-    try:
-        data: Any = json.loads(data_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        data = _enhancement_data_template()
-        data_path.parent.mkdir(parents=True, exist_ok=True)
-        data_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    except json.JSONDecodeError as error:
-        raise ValueError(f"Invalid JSON in {data_path}: {error}") from error
-    return _validate_enhancement_data(data), data_path
-
-
-def save_enhancement_data(path: Path, data: dict[str, Any]) -> None:
-    validated = _validate_enhancement_data(data)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(validated, indent=2) + "\n", encoding="utf-8")
-
-
-def enhancement_info(data: dict[str, Any], name: str) -> str:
-    if name in ENHANCEMENT_ADDONS:
-        return data["addons"][name]["info"]
-    for base in DEFAULT_ENHANCEMENTS:
-        prefix = f"{base} "
-        if name.startswith(prefix):
-            addon = name.removeprefix(prefix)
-            if addon in ENHANCEMENT_ADDONS:
-                return data["addons"][addon]["info"]
-    if name in DEFAULT_ENHANCEMENTS:
-        return data["defaults"][name]["info"]
-    return data["enhancements"].get(name, {}).get("info", "")
-
-
-def _validate_class_data(data: Any, class_name: str) -> dict[str, Any]:
-    if not isinstance(data, dict):
-        raise ValueError("Class data must be a JSON object.")
-
-    enhancements = data.get("enhancements")
-    skills = data.get("skills")
-    passives = (
-        data["passives"]
-        if "passives" in data
-        else _template(class_name)["passives"]
-    )
-    if (
-        not isinstance(enhancements, dict)
-        or not isinstance(skills, list)
-        or not isinstance(passives, list)
-    ):
-        raise ValueError(
-            "Class data needs 'enhancements', 'skills', and 'passives' sections."
-        )
-
-    mode_sources = {
-        "Base": ("Base", "Solo"),
-        "Solo": ("Solo",),
-        "Group": ("Group",),
-        "Special": ("Special", "Ultra"),
-    }
-    normalized_modes: dict[str, dict[str, Any]] = {}
-    for mode, source_names in mode_sources.items():
-        mode_data = next(
-            (
-                enhancements[source]
-                for source in source_names
-                if isinstance(enhancements.get(source), dict)
-            ),
-            None,
-        )
-        if not isinstance(mode_data, dict):
-            raise ValueError(f"Enhancements must include a '{mode}' object.")
-        normalized_modes[mode] = {}
-        for slot in ENHANCEMENT_SLOTS:
-            slot_data = mode_data.get(slot)
-            if not isinstance(slot_data, dict):
-                raise ValueError(f"{mode}.{slot} must be an object.")
-            if "type" in slot_data or "info" in slot_data:
-                options = {
-                    "best": {"type": ""},
-                    "alternative": {
-                        "type": slot_data.get("type", ""),
-                        "base": {"type": "Type"},
-                    },
-                }
-            else:
-                best = slot_data.get("best", {"type": ""})
-                if "alternative" in slot_data:
-                    raw_alternative = slot_data["alternative"]
-                else:
-                    raw_alternative = slot_data.get(
-                        "backup",
-                        slot_data.get("default", {"type": ""}),
-                    )
-                if isinstance(raw_alternative, dict):
-                    alternative = {"type": raw_alternative.get("type", "")}
-                    base = raw_alternative.get("base")
-                    if not isinstance(base, dict):
-                        old_default = slot_data.get("default")
-                        base = {
-                            "type": (
-                                old_default.get("type", "Type")
-                                if isinstance(old_default, dict)
-                                else "Type"
-                            )
-                        }
-                    alternative["base"] = base
-                else:
-                    alternative = raw_alternative
-                options = {"best": best, "alternative": alternative}
-            for option in ENHANCEMENT_OPTIONS:
-                candidate = options[option]
-                if not isinstance(candidate, dict):
-                    raise ValueError(f"{mode}.{slot}.{option} must be an object.")
-                name = candidate.get("type")
-                if not isinstance(name, str):
-                    raise ValueError(f"{mode}.{slot}.{option}.type must be text.")
-                if name.strip() not in _available_class_enhancements():
-                    raise ValueError(
-                        f"{mode}.{slot}.{option}.type is not an available enhancement."
-                    )
-            alternative = options["alternative"]
-            base = alternative.get("base")
-            if not isinstance(base, dict) or not isinstance(base.get("type"), str):
-                raise ValueError(f"{mode}.{slot}.alternative.base.type must be text.")
-            if base["type"].strip() not in _available_class_enhancements():
-                raise ValueError(
-                    f"{mode}.{slot}.alternative.base.type is not an available "
-                    "enhancement."
-                )
-            normalized_modes[mode][slot] = {
-                "best": {"type": options["best"]["type"]},
-                "alternative": {
-                    "type": alternative["type"],
-                    "base": {"type": base["type"]},
-                },
-            }
-        potions = mode_data.get(
-            "Potions",
-            {potion: "" for potion in POTION_TYPES},
-        )
-        if isinstance(potions, list):
-            if len(potions) != len(POTION_TYPES):
-                raise ValueError(
-                    f"{mode}.Potions must contain exactly three lines."
-                )
-            potions = {
-                potion: potions[index]
-                for index, potion in enumerate(POTION_TYPES)
-            }
+    segments: list[dict[str, str]] = []
+    for index, segment in enumerate(value):
+        segment_field = f"{field}[{index}]"
         if (
-            not isinstance(potions, dict)
-            or set(potions) != set(POTION_TYPES)
-            or any(not isinstance(potions[potion], str) for potion in POTION_TYPES)
+            not isinstance(segment, dict)
+            or set(segment) - {"text", "color"}
+            or not isinstance(segment.get("text"), str)
         ):
             raise ValueError(
-                f"{mode}.Potions must contain Tonic, Elixir, and Potion text."
+                f"{segment_field} must contain text and an optional color."
             )
-        normalized_modes[mode]["Potions"] = {
-            potion: potions[potion] for potion in POTION_TYPES
-        }
+        text = segment["text"]
+        color = segment.get("color")
+        if "color" in segment and (
+            not isinstance(color, str) or color not in DESCRIPTION_COLORS
+        ):
+            raise ValueError(
+                f"{segment_field}.color must be one of "
+                f"{', '.join(sorted(DESCRIPTION_COLORS))}."
+            )
+        if text:
+            segments.append(
+                {
+                    "text": text,
+                    **({"color": color} if "color" in segment else {}),
+                }
+            )
+    return segments
 
-    if len(skills) != 5:
-        raise ValueError("Class data must contain exactly five skills.")
-    for number, skill in enumerate(skills, start=1):
-        if not isinstance(skill, dict):
-            raise ValueError(f"Skill {number} must be an object.")
-        if not isinstance(skill.get("name"), str):
-            raise ValueError(f"Skill {number}.name must be text.")
-        if not isinstance(skill.get("info"), str):
-            raise ValueError(f"Skill {number}.info must be text.")
 
-    if len(passives) not in (2, 3):
-        raise ValueError("Class data must contain two or three passives.")
-    for number, passive in enumerate(passives, start=1):
-        if not isinstance(passive, dict):
-            raise ValueError(f"Passive {number} must be an object.")
-        if not isinstance(passive.get("name", ""), str):
-            raise ValueError(f"Passive {number}.name must be text.")
-        if not isinstance(passive.get("info", ""), str):
-            raise ValueError(f"Passive {number}.info must be text.")
-
-    result = _template(class_name)
-    result["enhancements"] = normalized_modes
-    result["skills"] = [
-        {
-            "name": (
-                ""
-                if skill["name"].strip().casefold() == f"skill {number}".casefold()
-                else skill["name"]
-            ),
-            "info": skill["info"],
-        }
-        for number, skill in enumerate(skills, start=1)
-    ]
-    result["passives"] = [
-        {
-            "name": passive.get("name", ""),
-            "info": passive.get("info", ""),
-        }
-        for passive in passives
-    ]
-    return result
+def enhancement_info(name: str) -> list[dict[str, str]]:
+    if name in ENHANCEMENT_ADDONS:
+        info = ADDON_INFO.get(name, "")
+    elif name in DEFAULT_ENHANCEMENTS:
+        info = DEFAULT_INFO.get(name, "")
+    else:
+        info = ENHANCEMENT_INFO.get(name, "")
+        for base in DEFAULT_ENHANCEMENTS:
+            addon = name.removeprefix(f"{base} ")
+            if name.startswith(f"{base} ") and addon in ENHANCEMENT_ADDONS:
+                info = ADDON_INFO.get(addon, "")
+    return _validate_description(info, f"{name}.info")
 
 
 def resolve_enhancements(
@@ -444,128 +134,111 @@ def _effective_candidate(
     return {**candidate, "type": base}
 
 
-def _import_legacy_enhancement_info(
-    data: Any,
-    shared_data: dict[str, Any],
-) -> bool:
-    if not isinstance(data, dict):
-        return False
-    enhancements = data.get("enhancements")
-    if not isinstance(enhancements, dict):
-        return False
-
-    changed = False
-    for mode_data in enhancements.values():
-        if not isinstance(mode_data, dict):
-            continue
-        for slot in ENHANCEMENT_SLOTS:
-            slot_data = mode_data.get(slot)
-            if not isinstance(slot_data, dict):
-                continue
-            options = ("default",) if "type" in slot_data or "info" in slot_data else (
-                "best",
-                "backup",
-                "default",
-                "alternative",
-            )
-            for option in options:
-                candidate = slot_data if options == ("default",) else slot_data.get(option)
-                if not isinstance(candidate, dict):
-                    continue
-                info = candidate.get("info")
-                name = candidate.get("type")
-                if not isinstance(info, str) or not info.strip() or not isinstance(
-                    name, str
-                ):
-                    continue
-                target = _enhancement_data_entry(shared_data, name.strip())
-                if target is not None and not target["info"].strip():
-                    target["info"] = info
-                    changed = True
-    return changed
+CLASS_DEFINITIONS_FILE = Path(__file__).with_name("classes.py")
+SKILL_COUNT = 5
+MIN_PASSIVES = 2
+MAX_PASSIVES = 3
+MODE_FIELDS = {"Base": "base", "Solo": "solo", "Group": "group", "Special": "special"}
+SLOT_FIELDS = {"Class": "cls", "Helm": "helm", "Weapon": "weapon", "Cape": "cape"}
+POTION_FIELDS = {"Tonic": "tonic", "Elixir": "elixir", "Potion": "potion"}
 
 
-def _enhancement_data_entry(
-    data: dict[str, Any],
-    name: str,
-) -> dict[str, str] | None:
-    for base in DEFAULT_ENHANCEMENTS:
-        prefix = f"{base} "
-        if name.startswith(prefix):
-            addon = name.removeprefix(prefix)
-            if addon in ENHANCEMENT_ADDONS:
-                return data["addons"][addon]
-    if name in DEFAULT_ENHANCEMENTS:
-        return data["defaults"][name]
-    return data["enhancements"].get(name)
+def class_data_names() -> list[str]:
+    return sorted((definition.name for definition in CLASSES), key=str.casefold)
 
 
-def load_or_create_class_data(
-    class_name: str,
-    directory: Path | None = None,
-    shared_enhancement_data: dict[str, Any] | None = None,
-    shared_enhancement_path: Path | None = None,
-) -> tuple[dict[str, Any], Path]:
-    path = class_data_path(class_name, directory)
-    legacy_path: Path | None = None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        for candidate in _legacy_class_data_paths(class_name, path.parent):
-            if candidate.is_file():
-                legacy_path = candidate
-                break
-        if legacy_path is None:
-            data = _template(class_name)
-        else:
-            try:
-                data = json.loads(legacy_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError as error:
-                raise ValueError(
-                    f"Invalid JSON in {legacy_path}: {error}"
-                ) from error
-    except json.JSONDecodeError as error:
-        raise ValueError(f"Invalid JSON in {path}: {error}") from error
-    stored_name = data.get("class_name") if isinstance(data, dict) else None
-    if (
-        isinstance(stored_name, str)
-        and stored_name.strip().casefold() != class_name.strip().casefold()
-    ):
-        raise ValueError(
-            f"Class data file {path} belongs to {stored_name!r}, "
-            f"not {class_name!r}."
+def _find_class(class_name: str) -> ClassDef:
+    folded = class_name.strip().casefold()
+    for definition in CLASSES:
+        if definition.name.casefold() == folded:
+            return definition
+    raise ValueError(f"Unknown class: {class_name}")
+
+
+def _resolved_fields(definition: ClassDef) -> dict[str, Any]:
+    chain: list[ClassDef] = []
+    current: ClassDef | None = definition
+    while current is not None:
+        if current in chain:
+            names = " -> ".join(item.name for item in (*chain, current))
+            raise ValueError(f"Class same_as cycle: {names}")
+        chain.append(current)
+        current = _find_class(current.same_as) if current.same_as else None
+
+    fields: dict[str, Any] = {}
+    for item in reversed(chain):
+        fields.update(
+            {key: value for key, value in item.field_values().items() if value is not None}
         )
-    if shared_enhancement_data is not None and _import_legacy_enhancement_info(
-        data,
-        shared_enhancement_data,
-    ):
-        if shared_enhancement_path is not None:
-            save_enhancement_data(
-                shared_enhancement_path,
-                shared_enhancement_data,
-            )
-    validated = _validate_class_data(data, class_name)
-    if (
-        legacy_path is not None
-        or not path.exists()
-        or "passives" not in data
-        or data.get("enhancements") != validated["enhancements"]
-    ):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(validated, indent=2) + "\n", encoding="utf-8")
-    if legacy_path is not None:
-        legacy_path.unlink()
-    template_path = class_data_path(class_name, class_template_directory())
-    try:
-        template_data: Any = json.loads(template_path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        template_data = _template(class_name)
-    except json.JSONDecodeError as error:
-        raise ValueError(
-            f"Invalid JSON in class template {template_path}: {error}"
-        ) from error
-    validated_template = _validate_class_data(template_data, class_name)
-    return _validate_class_data(
-        _merge_class_defaults(validated_template, validated),
-        class_name,
-    ), path
+    return fields
+
+
+def _check_enhancement(name: str, field: str) -> str:
+    if name.strip() not in _available_class_enhancements():
+        raise ValueError(f"{field} is not an available enhancement: {name!r}")
+    return name
+
+
+def _slot_data(slot: Slot, field: str) -> dict[str, Any]:
+    return {
+        "best": {"type": _check_enhancement(slot.best, f"{field}.best")},
+        "alternative": {
+            "type": _check_enhancement(slot.alternative, f"{field}.alternative"),
+            "base": {"type": _check_enhancement(slot.base, f"{field}.base")},
+        },
+    }
+
+
+def _mode_data(mode: Mode, field: str) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        slot: _slot_data(getattr(mode, attribute), f"{field}.{slot}")
+        for slot, attribute in SLOT_FIELDS.items()
+    }
+    data["Potions"] = {
+        potion: getattr(mode, attribute)
+        for potion, attribute in POTION_FIELDS.items()
+    }
+    return data
+
+
+def _skill_data(skill: Skill, field: str) -> dict[str, Any]:
+    info = list(skill.info) if isinstance(skill.info, tuple) else skill.info
+    return {"name": skill.name, "info": _validate_description(info, f"{field}.info")}
+
+
+def load_class_data(class_name: str) -> dict[str, Any]:
+    definition = _find_class(class_name)
+    fields = _resolved_fields(definition)
+    name = definition.name
+
+    skills = tuple(fields.get("skills", ()))
+    if len(skills) > SKILL_COUNT:
+        raise ValueError(f"{name} has more than {SKILL_COUNT} skills.")
+    skills += (Skill(),) * (SKILL_COUNT - len(skills))
+
+    passives = tuple(fields.get("passives", ()))
+    if len(passives) > MAX_PASSIVES:
+        raise ValueError(f"{name} has more than {MAX_PASSIVES} passives.")
+    passives += (Skill(),) * (MIN_PASSIVES - len(passives))
+
+    description = fields.get("description", "")
+    if isinstance(description, tuple):
+        description = list(description)
+
+    return {
+        "class_name": name,
+        "model": fields.get("model", ""),
+        "description": _validate_description(description, f"{name}.description"),
+        "enhancements": {
+            mode: _mode_data(fields.get(attribute) or Mode(), f"{name}.{mode}")
+            for mode, attribute in MODE_FIELDS.items()
+        },
+        "skills": [
+            _skill_data(skill, f"{name}.skill {number}")
+            for number, skill in enumerate(skills, start=1)
+        ],
+        "passives": [
+            _skill_data(passive, f"{name}.passive {number}")
+            for number, passive in enumerate(passives, start=1)
+        ],
+    }

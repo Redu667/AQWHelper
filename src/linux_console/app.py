@@ -18,6 +18,7 @@ from textual.content import Content
 from textual.events import Click, Key, Resize
 from textual.geometry import Size
 from textual.message import Message
+from textual.screen import ModalScreen
 from textual.suggester import Suggester
 from textual.widgets import Button, Input, ListItem, ListView, Static
 
@@ -38,6 +39,7 @@ from linux_console.class_info import CLASS_MODEL_DESCRIPTIONS
 from linux_console.class_data import (
     ENHANCEMENT_MODES,
     ENHANCEMENT_SLOTS,
+    POTION_FIELDS,
     CLASS_DEFINITIONS_FILE,
     class_data_names,
     enhancement_info,
@@ -177,6 +179,90 @@ class NavButton(Button):
     def render(self) -> Content:
         marker = ">" if self.mouse_hover or self.has_class("nav-cursor") else " "
         return Content(f"{marker} ") + self.label
+
+
+class QuitChoice(NavButton):
+    def render(self) -> Content:
+        marker = ">" if self.mouse_hover or self.has_focus else " "
+        return Content.assemble((f"{marker} ", "#FFE3B5"), self.label)
+
+
+class QuitConfirm(ModalScreen[bool]):
+    """Full-screen "Close app?" prompt shown from the home screen."""
+
+    DEFAULT_CSS = """
+    QuitConfirm {
+        align: center middle;
+        background: #000000;
+    }
+    #quit-box {
+        width: 48;
+        height: auto;
+        padding: 1 2;
+        background: #000000;
+        border: round #4ade80;
+        border-title-align: left;
+        border-title-color: #4ade80;
+        border-title-background: #000000;
+    }
+    #quit-buttons {
+        width: 100%;
+        height: auto;
+        align-horizontal: center;
+    }
+    #quit-buttons QuitChoice,
+    #quit-buttons QuitChoice:hover,
+    #quit-buttons QuitChoice:focus,
+    #quit-buttons QuitChoice.-active {
+        width: auto;
+        min-width: 0;
+        height: 1;
+        margin: 0 2;
+        padding: 0;
+        color: #4ade80;
+        background: #000000;
+        background-tint: transparent;
+        border: none;
+        text-style: none;
+    }
+    """
+
+    BINDINGS = [
+        Binding("left", "toggle_choice", show=False),
+        Binding("a", "toggle_choice", show=False),
+        Binding("right", "toggle_choice", show=False),
+        Binding("d", "toggle_choice", show=False),
+        Binding("tab", "toggle_choice", show=False),
+        Binding("y", "answer(True)", show=False),
+        Binding("n", "answer(False)", show=False),
+        Binding("space", "press_focused", show=False),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="quit-box"):
+            with Horizontal(id="quit-buttons"):
+                yield QuitChoice("Yes (Y)", id="quit-yes")
+                yield QuitChoice("No (N)", id="quit-no")
+
+    def on_mount(self) -> None:
+        self.query_one("#quit-box").border_title = "Close app?"
+        self.query_one("#quit-yes", Button).focus()
+
+    def action_toggle_choice(self) -> None:
+        yes = self.query_one("#quit-yes", Button)
+        no = self.query_one("#quit-no", Button)
+        (yes if self.focused is no else no).focus()
+
+    def action_answer(self, value: bool) -> None:
+        self.dismiss(value)
+
+    def action_press_focused(self) -> None:
+        if isinstance(self.focused, Button):
+            self.focused.press()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        self.dismiss(event.button.id == "quit-yes")
 
 
 class CommandSuggester(Suggester):
@@ -464,6 +550,7 @@ class LinuxConsoleApp(App[None]):
     """
     BINDINGS = [
         Binding("ctrl+c", "shortcut_char", show=False, priority=True),
+        Binding("ctrl+l", "shortcut_class", show=False, priority=True),
         Binding("ctrl+r", "shortcut_reload", show=False, priority=True),
         Binding("ctrl+e", "shortcut_enhancements", show=False, priority=True),
         Binding("ctrl+s", "shortcut_stats", show=False, priority=True),
@@ -471,7 +558,7 @@ class LinuxConsoleApp(App[None]):
         Binding("ctrl+u", "shortcut_update", show=False, priority=True),
         Binding("ctrl+a", "shortcut_advanced", show=False, priority=True),
         Binding("ctrl+z", "navigate_back", show=False, priority=True),
-        Binding("escape", "quit", show=False, priority=True),
+        Binding("escape", "escape_back", show=False, priority=True),
         Binding("pageup", "scroll_info_up", show=False, priority=True),
         Binding("pagedown", "scroll_info_down", show=False, priority=True),
         Binding("ctrl+n", "toggle_navigation", show=False, priority=True),
@@ -479,6 +566,7 @@ class LinuxConsoleApp(App[None]):
         Binding("up", "nav_up", show=False, priority=True),
         Binding("down", "nav_down", show=False, priority=True),
         Binding("enter", "nav_select", show=False, priority=True),
+        Binding("space", "nav_select", show=False, priority=True),
         Binding("right", "nav_right", show=False, priority=True),
         Binding("left", "nav_left", show=False, priority=True),
         Binding("backspace", "nav_back", show=False, priority=True),
@@ -499,6 +587,7 @@ class LinuxConsoleApp(App[None]):
         self.settings_path = settings_path or config_path()
         self.account: str | None = None
         self.character_classes: list[str] = []
+        self.listed_classes: list[str] = []
         self.selected_enhancements = set(TOGGLEABLE_ENHANCEMENTS)
         self.selected_class = ""
         self.selected_class_data: dict[str, Any] = {}
@@ -604,6 +693,9 @@ class LinuxConsoleApp(App[None]):
     async def action_shortcut_char(self) -> None:
         await self._submit_shortcut_command("char")
 
+    async def action_shortcut_class(self) -> None:
+        await self._submit_shortcut_command("class")
+
     async def action_shortcut_reload(self) -> None:
         await self._submit_shortcut_command("reload")
 
@@ -627,6 +719,18 @@ class LinuxConsoleApp(App[None]):
         command_input.value = f"/{command}"
         await command_input.action_submit()
 
+    async def action_escape_back(self) -> None:
+        if len(self.screen_stack) > 1:
+            self.screen.dismiss(False)
+        elif self._info_panel_title == "Commands":
+            self.push_screen(QuitConfirm(), self._on_quit_confirmed)
+        else:
+            await self.action_navigate_back()
+
+    def _on_quit_confirmed(self, confirmed: bool | None) -> None:
+        if confirmed:
+            self.run_worker(self.action_quit())
+
     async def action_quit(self) -> None:
         await self._clear_runtime_cache()
         await super().action_quit()
@@ -635,6 +739,7 @@ class LinuxConsoleApp(App[None]):
         self.account = None
         self._update_character_placeholder()
         self.character_classes.clear()
+        self.listed_classes.clear()
         self.selected_enhancements = set(TOGGLEABLE_ENHANCEMENTS)
         self._clear_selected_class_data()
         self.account_history.clear()
@@ -822,6 +927,8 @@ class LinuxConsoleApp(App[None]):
         elif command == "class":
             if argument:
                 await self._show_selected_class(argument)
+            else:
+                await self._show_all_classes()
         elif command == "enhancements":
             if argument:
                 await self._set_info("Usage: enhancements", "#f87171")
@@ -856,7 +963,7 @@ class LinuxConsoleApp(App[None]):
             if argument:
                 await self._set_info("Usage: quit", "#f87171")
             else:
-                await self.action_quit()
+                self.push_screen(QuitConfirm(), self._on_quit_confirmed)
 
     def _is_first_run(self) -> bool:
         return self.query_one("#entry-area", Vertical).has_class("first-run")
@@ -895,6 +1002,7 @@ class LinuxConsoleApp(App[None]):
         self.account = None
         self._update_character_placeholder()
         self.character_classes = []
+        self.listed_classes = []
         class_list = self.query_one("#class-list", ListView)
         self._info_back_enabled = False
         self._info_home_enabled = False
@@ -913,10 +1021,19 @@ class LinuxConsoleApp(App[None]):
                 return
             await class_list.clear()
             self._loading_character_generation = None
+            if isinstance(error, ValueError):
+                self.listed_classes = []
+                if background_startup:
+                    self.notify(f"Could not load {account}: {error}", severity="error")
+                else:
+                    await self._set_info(f"Could not load {account}: {error}", "#f87171")
+                return
+            await self._populate_class_list(class_data_names())
+            message = f"Could not load {account}: {error}. Showing all classes."
             if background_startup:
-                self.notify(f"Could not load {account}: {error}", severity="error")
+                self.notify(message, severity="error")
             else:
-                await self._set_info(f"Could not load {account}: {error}", "#f87171")
+                await self._set_info(message, "#f87171")
             return
 
         if generation != self._character_load_generation:
@@ -953,20 +1070,8 @@ class LinuxConsoleApp(App[None]):
         self.character_classes = classes.copy()
         self.selected_enhancements = selected_enhancements
         await self._populate_enhancements()
-        await class_list.clear()
         self._loading_character_generation = None
-        if self.character_classes:
-            await class_list.extend(
-                ListItem(
-                    Horizontal(
-                        Static(">", classes="class-marker"),
-                        Static(name, classes="class-name"),
-                        classes="class-row",
-                    ),
-                    classes="class-list-item",
-                )
-                for name in self.character_classes
-            )
+        await self._populate_class_list(self.character_classes)
 
         if background_startup:
             class_list.index = None
@@ -981,6 +1086,30 @@ class LinuxConsoleApp(App[None]):
             f"Loaded {len(self.character_classes)} classes for {account}."
         )
 
+    async def _populate_class_list(self, names: list[str]) -> None:
+        class_list = self.query_one("#class-list", ListView)
+        self.listed_classes = list(names)
+        await class_list.clear()
+        if names:
+            await class_list.extend(
+                ListItem(
+                    Horizontal(
+                        Static(">", classes="class-marker"),
+                        Static(name, classes="class-name"),
+                        classes="class-row",
+                    ),
+                    classes="class-list-item",
+                )
+                for name in names
+            )
+        class_list.index = None
+
+    async def _show_all_classes(self) -> None:
+        await self._populate_class_list(class_data_names())
+        await self._show_commands(
+            f"Showing all {len(self.listed_classes)} classes."
+        )
+
     async def _clear_stale_loading_indicator(self, generation: int) -> None:
         if self._loading_character_generation != generation:
             return
@@ -989,11 +1118,11 @@ class LinuxConsoleApp(App[None]):
 
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index
-        if index is not None and 0 <= index < len(self.character_classes):
+        if index is not None and 0 <= index < len(self.listed_classes):
             for item in event.list_view.children:
                 item.remove_class("selected")
             event.list_view.children[index].add_class("selected")
-            await self._show_selected_class(self.character_classes[index])
+            await self._show_selected_class(self.listed_classes[index])
             if self.nav_mode:
                 self._set_nav_pane("left")
 
@@ -1329,6 +1458,8 @@ class LinuxConsoleApp(App[None]):
             await super().action_quit()
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if len(self.screen_stack) > 1:
+            return action == "escape_back"
         if action in NAV_ACTIONS:
             return self.nav_mode
         return True
@@ -1361,12 +1492,15 @@ class LinuxConsoleApp(App[None]):
         self._sync_nav_cursor()
 
     def action_nav_toggle_pane(self) -> None:
+        self._focus_nav_pane("left" if self.nav_pane == "right" else "right")
+
+    def _focus_nav_pane(self, pane: str) -> None:
         class_list = self.query_one("#class-list", ListView)
         has_right = bool(class_list.children) or self.nav_tab == "enhancements"
-        if self.nav_pane == "right" or not has_right:
-            self._set_nav_pane("left")
-        else:
-            self._set_nav_pane("right")
+        if pane == "right" and not has_right:
+            return
+        self.nav_header = False
+        self._set_nav_pane(pane)
 
     def _nav_buttons(self) -> list[NavButton]:
         content = self.query_one("#info-content", VerticalScroll)
@@ -1473,18 +1607,18 @@ class LinuxConsoleApp(App[None]):
         return self.nav_pane == "right" and self.nav_header
 
     def action_nav_right(self) -> None:
-        if self._on_nav_header():
+        if self._on_nav_header() and self.nav_header_item == "classes":
             self.nav_header_item = "enhancements"
             self._sync_nav_cursor()
         else:
-            self.action_nav_select()
+            self._focus_nav_pane("right")
 
-    async def action_nav_left(self) -> None:
-        if self._on_nav_header():
+    def action_nav_left(self) -> None:
+        if self._on_nav_header() and self.nav_header_item == "enhancements":
             self.nav_header_item = "classes"
             self._sync_nav_cursor()
         else:
-            await self.action_nav_back()
+            self._focus_nav_pane("left")
 
     async def action_nav_back(self) -> None:
         await self.action_navigate_back()
@@ -1588,7 +1722,9 @@ class LinuxConsoleApp(App[None]):
         if description:
             await content.mount(
                 Static(
-                    style_description(description),
+                    Text.from_markup(
+                        "".join(segment["text"] for segment in description)
+                    ),
                     classes="info-detail class-description",
                 ),
             )
@@ -1660,7 +1796,7 @@ class LinuxConsoleApp(App[None]):
             "Potions",
             "\n".join(
                 f"{potion}: {potions[potion]}"
-                for potion in ("Tonic", "Elixir", "Potion")
+                for potion in POTION_FIELDS
             ),
         )
 
@@ -1710,24 +1846,34 @@ class LinuxConsoleApp(App[None]):
         await self._show_catalog_page("Advanced")
         content = self.query_one("#info-content", VerticalScroll)
         shortcuts = (
-            ("  Ctrl+A  ", "Show this navigation helper"),
-            ("  Ctrl+C  ", "Display Characters list"),
-            ("  Ctrl+E  ", "Show Enhancements page"),
-            ("  Ctrl+R  ", "Reload the program"),
-            ("  Ctrl+S  ", "Show Stats page"),
-            ("  Ctrl+U  ", "Run Update"),
-            ("  Ctrl+X  ", "Return to Home screen"),
-            ("  Ctrl+Z  ", "Go back to previous screen"),
-            ("  Ctrl+N  ", "Toggle Navigation mode"),
-            ("  Tab     ", "Swap windows (Navigation)"),
-            ("  PgUp    ", "Scroll the panel up"),
-            ("  PgDn    ", "Scroll the panel down"),
-            ("  Escape  ", "Close the app"),
+            ("  Ctrl+A  ",  "Show this page"),
+            ("  Ctrl+C  ",  "Display Characters list"),
+            ("  Ctrl+E  ",  "Show Enhancements info"),
+            ("  Ctrl+L  ",  "Show ALL classes"),
+            ("  Ctrl+R  ",  "Reload the program"),
+            ("  Ctrl+S  ",  "Show Stats page"),
+            ("  Ctrl+U  ",  "Run Update"),
+            ("  Ctrl+X  ",  "Return to Home screen"),
+            ("  Ctrl+Z  ",  "Go back to previous screen"),
+            ("  Ctrl+N  ",  "Toggle Navigation mode"),
+            ("  Tab     ",  "Change window focus"),
+            ("  ⇄ Arrow ",  "Focus left/right window"),
+            ("  ⇅ Arrow ",  "Scroll up/down"),
+            ("  WASD    ",  "Arrow keys movement"),
+            ("  PgUp    ",  "Scroll to top"),
+            ("  PgDn    ",  "Scroll to bottom"),
+            ("  Enter   ",  "Select"),
+            ("  Backspc ",  "Go back"),
+            ("  Escape  ",  "Go back / Close app"),
         )
-        for key, description in shortcuts:
-            label = Text(f"{key:<8}", style="#4ade80")
-            label.append(description, style="#d1d5db")
-            await content.mount(Static(label, classes="info-detail"))
+        groups = (("Shortcuts", shortcuts[:10]), ("Navigation", shortcuts[10:]))
+        for title, entries in groups:
+            segments: list[dict[str, str]] = []
+            for key, description in entries:
+                segments.append({"text": key, "color": "#4ade80"})
+                segments.append({"text": f"{description}\n\n", "color": "#ffffff"})
+            segments[-1]["text"] = segments[-1]["text"].rstrip("\n")
+            await self._mount_detail(content, title, segments)
 
     async def _show_catalog_page(self, title: str) -> None:
         self._clear_selected_class_data()

@@ -16,9 +16,7 @@ from linux_console.enhancement_info import (
 
 
 ENHANCEMENT_MODES = ("Base", "Solo", "Group", "Special")
-ENHANCEMENT_SLOTS = ("Class", "Helm", "Weapon", "Cape")
 ENHANCEMENT_OPTIONS = ("best", "alternative")
-POTION_TYPES = ("Tonic", "Elixir", "Potion")
 DESCRIPTION_COLORS = frozenset(
     {"red", "green", "yellow", "blue", "magenta", "cyan", "white"}
 )
@@ -139,8 +137,9 @@ SKILL_COUNT = 5
 MIN_PASSIVES = 2
 MAX_PASSIVES = 3
 MODE_FIELDS = {"Base": "base", "Solo": "solo", "Group": "group", "Special": "special"}
-SLOT_FIELDS = {"Class": "cls", "Helm": "helm", "Weapon": "weapon", "Cape": "cape"}
-POTION_FIELDS = {"Tonic": "tonic", "Elixir": "elixir", "Potion": "potion"}
+SLOT_FIELDS = {"[b]  Class ⑆\b": "cls", "[b]  Helm ⑉\b": "helm", "[b]  Weapon ⑇\b": "weapon", "[b]  Cape ⑈\b": "cape"}
+ENHANCEMENT_SLOTS = tuple(SLOT_FIELDS)
+POTION_FIELDS = {"     Tonic": "tonic", "     Elixir": "elixir", "     Potion": "potion"}
 
 
 def class_data_names() -> list[str]:

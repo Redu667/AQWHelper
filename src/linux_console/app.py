@@ -856,6 +856,10 @@ class LinuxConsoleApp(App[None]):
         has_leading_slash = token.startswith("/")
         command_prefix = token.lstrip("/")
         command_names = [command.strip() for command, _ in COMMANDS]
+        alias = COMMAND_ALIASES.get(command_prefix.casefold())
+        if alias is not None and alias.startswith(command_prefix.casefold()):
+            # Suggest what Enter will run, e.g. "r" is return, not reload.
+            command_names.insert(0, alias)
         for command in command_names:
             if command.casefold().startswith(command_prefix.casefold()):
                 suggestion = f"/{command}" if has_leading_slash else command
@@ -965,6 +969,11 @@ class LinuxConsoleApp(App[None]):
                 await self._set_info("Usage: quit", "#f87171")
             else:
                 self.push_screen(QuitConfirm(), self._on_quit_confirmed)
+        else:
+            await self._set_info(
+                f"Unknown command: {parts[0]}. Type return to see the commands.",
+                "#f87171",
+            )
 
     def _is_first_run(self) -> bool:
         return self.query_one("#entry-area", Vertical).has_class("first-run")
@@ -1025,14 +1034,18 @@ class LinuxConsoleApp(App[None]):
             if isinstance(error, ValueError):
                 self.listed_classes = []
                 if background_startup:
-                    self.notify(f"Could not load {account}: {error}", severity="error")
+                    self.notify(
+                        f"Could not load {account}: {error}",
+                        severity="error",
+                        markup=False,
+                    )
                 else:
                     await self._set_info(f"Could not load {account}: {error}", "#f87171")
                 return
             await self._populate_class_list(class_data_names())
             message = f"Could not load {account}: {error}. Showing all classes."
             if background_startup:
-                self.notify(message, severity="error")
+                self.notify(message, severity="error", markup=False)
             else:
                 await self._set_info(message, "#f87171")
             return
@@ -1061,7 +1074,7 @@ class LinuxConsoleApp(App[None]):
             self._loading_character_generation = None
             message = f"Loaded {account}, but could not save the profile list: {error}"
             if background_startup:
-                self.notify(message, severity="error")
+                self.notify(message, severity="error", markup=False)
             else:
                 await self._set_info(message, "#f87171")
             return
@@ -1158,6 +1171,7 @@ class LinuxConsoleApp(App[None]):
             self.notify(
                 f"Could not save enhancements for {self.account}: {error}",
                 severity="error",
+                markup=False,
             )
 
     async def _populate_enhancements(self) -> None:
@@ -1306,7 +1320,7 @@ class LinuxConsoleApp(App[None]):
         self._set_home_enabled(False)
         await self._clear_info_content()
         await self.query_one("#info-content", VerticalScroll).mount(
-            Static(message, classes="info-detail")
+            Static(message, classes="info-detail", markup=False)
         )
 
     async def _show_commands(self, status: str | None = None) -> None:
@@ -1327,7 +1341,7 @@ class LinuxConsoleApp(App[None]):
             label.append(description, style="#d1d5db")
             await content.mount(Static(label, classes="info-detail"))
         if status:
-            await content.mount(Static(status, classes="info-detail"))
+            await content.mount(Static(status, classes="info-detail", markup=False))
 
     async def _show_saved_characters(self, status: str | None = None) -> None:
         await self._clear_info_content()
@@ -1345,7 +1359,7 @@ class LinuxConsoleApp(App[None]):
             )
         )
         if status:
-            await content.mount(Static(status, classes="info-detail"))
+            await content.mount(Static(status, classes="info-detail", markup=False))
         if not self.account_history:
             await content.mount(
                 Static(

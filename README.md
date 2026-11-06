@@ -1,7 +1,3 @@
-# WARNING FOR WINDOWS USERS:
-When the app is launched, type aqwhelper and press enter to start it
-I cannot be bothered to fix Windows
-
 # For anyone wanting to contribute with information:
 
 ## class_info.py

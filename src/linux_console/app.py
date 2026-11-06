@@ -1949,3 +1949,7 @@ def main() -> None:
             sys.executable,
             [sys.executable, "-m", "linux_console", *sys.argv[1:]],
         )
+
+
+if __name__ == "__main__":
+    main()

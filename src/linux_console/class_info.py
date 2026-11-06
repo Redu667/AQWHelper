@@ -59,7 +59,7 @@ CLASSES: tuple[ClassDef, ...] = (
         ),
     ),
     ClassDef("Abyssal Angel's Shadow", same_as="Abyssal Angel"),
-    ClassDef('Acolyte'),
+    ClassDef('Acolyte', model="Defensive Caster"),
     ClassDef('Alpha DOOMmega',
         model="Tank Melee",
         description="[#fbea55]Solo[#ffffff] / [#32ef89]DPS[#ffffff]\n",
@@ -90,6 +90,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Alpha Omega',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky', alternative='', base=''),
@@ -115,10 +116,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Avarice', alternative='', base=''),
         ),
     ),
-    ClassDef('Alpha Pirate'),
-    ClassDef('Antique Hunter'),
+    ClassDef('Alpha Pirate', model="Luck Hybrid"),
+    ClassDef('Antique Hunter', same_as="Artifact Hunter"),
     ClassDef(
         'Arachnomancer',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -146,6 +148,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Arcana Invoker',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -171,9 +174,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Penitence', alternative='', base=''),
         ),
     ),
-    ClassDef('Arcane Dark Caster'),
+    ClassDef('Arcane Dark Caster', same_as="Timeless Dark Caster"),
     ClassDef(
         'ArchFiend',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Health Vamp', alternative='', base=''),
@@ -199,9 +203,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Archivist of Temporis'),
+    ClassDef('Archivist of Temporis', model="Offensive Caster"),
     ClassDef(
         'Archivist of Time',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -229,6 +234,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'ArchMage',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best="Hero's Valiance", alternative='', base=''),
@@ -256,6 +262,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'ArchPaladin',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -283,6 +290,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Artifact Hunter',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -308,10 +316,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Assassin'),
-    ClassDef('Barber'),
+    ClassDef('Assassin', model="Dodge Melee"),
+    ClassDef('Barber', model="Tank Melee"),
     ClassDef(
         'Bard',
+        model="Defensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Awe Blast', alternative='', base=''),
@@ -337,15 +346,16 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Battle Bard'),
-    ClassDef('Battle Healer'),
-    ClassDef('Battle Warrior'),
-    ClassDef('BattleMage'),
-    ClassDef('BattleMage of Love'),
-    ClassDef('Beast Warrior'),
-    ClassDef('BeastMaster'),
+    ClassDef('Battle Bard', model="Defensive Caster"),
+    ClassDef('Battle Healer', model="Defensive Caster"),
+    ClassDef('Battle Warrior', model="Tank Melee"),
+    ClassDef('BattleMage', same_as="Royal BattleMage"),
+    ClassDef('BattleMage of Love', same_as="Royal BattleMage"),
+    ClassDef('Beast Warrior', same_as="Warrior"),
+    ClassDef('BeastMaster', model="Dodge Melee"),
     ClassDef(
         'Berserker',
+        model="Power Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -371,11 +381,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Beta Berserker'),
-    ClassDef('BladeMaster'),
-    ClassDef('BladeMaster Assassin'),
+    ClassDef('Beta Berserker', same_as="Berserker"),
+    ClassDef('BladeMaster', same_as="SwordMaster"),
+    ClassDef('BladeMaster Assassin', same_as="SwordMaster Assassin"),
     ClassDef(
         'Blaze Binder',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Mana Vamp', alternative='', base=''),
@@ -401,10 +412,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Blood Ancient'),
-    ClassDef('Blood Sorceress'),
+    ClassDef('Blood Ancient', model="Dodge Melee"),
+    ClassDef('Blood Sorceress', model="Offensive Caster"),
     ClassDef(
         'Blood Titan',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Fighter', alternative='', base=''),
@@ -430,10 +442,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Brutal Berserker'),
-    ClassDef('CardClasher'),
+    ClassDef('Brutal Berserker', same_as="Berserker"),
+    ClassDef('CardClasher', model="Luck Hybrid"),
     ClassDef(
         'Chaos Avenger',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lacerate', alternative='', base=''),
@@ -459,10 +472,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Penitence', alternative='', base=''),
         ),
     ),
-    ClassDef('Chaos Avenger Member Preview'),
-    ClassDef('Chaos Champion Prime'),
+    ClassDef('Chaos Avenger Member Preview', same_as="Berserker"),
+    ClassDef('Chaos Champion Prime', same_as="Chaos Slayer Berserker"),
     ClassDef(
         'Chaos Shaper',
+        model="Luck Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -488,13 +502,14 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Chaos Slayer Berserker'),
-    ClassDef('Chaos Slayer Cleric'),
-    ClassDef('Chaos Slayer Mystic'),
-    ClassDef('Chaos Slayer Thief'),
-    ClassDef('Chrono Assassin'),
+    ClassDef('Chaos Slayer Berserker', model="Full Hybrid"),
+    ClassDef('Chaos Slayer Cleric', same_as="Chaos Slayer Berserker"),
+    ClassDef('Chaos Slayer Mystic', same_as="Chaos Slayer Berserker"),
+    ClassDef('Chaos Slayer Thief', same_as="Chaos Slayer Berserker"),
+    ClassDef('Chrono Assassin', model="Dodge Melee"),
     ClassDef(
         'Chrono Chaorruptor',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -522,6 +537,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Chrono Commandant',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -549,6 +565,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Chrono DataKnight',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -574,10 +591,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Chrono DragonKnight'),
-    ClassDef('Chrono ShadowHunter'),
+    ClassDef('Chrono DragonKnight', model="Offensive Caster"),
+    ClassDef('Chrono ShadowHunter', model="Luck Hybrid"),
     ClassDef(
         'Chrono ShadowSlayer',
+        model="Luck Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -603,10 +621,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('ChronoCommander'),
-    ClassDef('ChronoCorruptor'),
+    ClassDef('ChronoCommander', model="Tank Melee"),
+    ClassDef('ChronoCorruptor', model="Full Hybrid"),
     ClassDef(
         'Chronomancer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -632,9 +651,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Chronomancer Prime'),
+    ClassDef('Chronomancer Prime', model="Full Hybrid"),
     ClassDef(
         'Chunin',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -660,16 +680,17 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Classic Alpha Pirate'),
-    ClassDef('Classic Barber'),
-    ClassDef('Classic Defender'),
-    ClassDef('Classic DoomKnight'),
-    ClassDef('Classic Dragonlord'),
-    ClassDef('Classic Exalted Soul Cleaver'),
-    ClassDef('Classic Guardian'),
+    ClassDef('Classic Alpha Pirate', same_as="Rogue"),
+    ClassDef('Classic Barber', same_as="Rogue"),
+    ClassDef('Classic Defender', model="Tank Melee"),
+    ClassDef('Classic DoomKnight', same_as="DoomKnight"),
+    ClassDef('Classic Dragonlord', model="Power Melee"),
+    ClassDef('Classic Exalted Soul Cleaver', model="Full Hybrid"),
+    ClassDef('Classic Guardian', model="Full Hybrid"),
     ClassDef('Classic Legion DoomKnight'),
     ClassDef(
         'Classic Ninja',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -695,14 +716,15 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Classic Paladin'),
-    ClassDef('Classic Pirate'),
-    ClassDef('Classic Soul Cleaver'),
-    ClassDef('ClawSuit'),
-    ClassDef('Continuum Chronomancer'),
-    ClassDef('Corrupted Chronomancer'),
+    ClassDef('Classic Paladin', model="Full Hybrid"),
+    ClassDef('Classic Pirate', same_as="Rogue"),
+    ClassDef('Classic Soul Cleaver', model="Full Hybrid"),
+    ClassDef('ClawSuit', model="Tank Melee"),
+    ClassDef('Continuum Chronomancer', model="Full Hybrid"),
+    ClassDef('Corrupted Chronomancer', same_as="Timeless Chronomancer"),
     ClassDef(
         'Cryomancer',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -728,17 +750,18 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Cryomancer Mini Pet Coming Soon'),
-    ClassDef('Daimon'),
-    ClassDef('Dark BattleMage'),
-    ClassDef('Dark Caster'),
-    ClassDef('Dark Chaos Berserker'),
-    ClassDef('Dark Cryomancer'),
-    ClassDef('Dark Glaceran Warlord'),
-    ClassDef('Dark Harbinger'),
-    ClassDef('Dark Legendary Hero'),
+    ClassDef('Cryomancer Mini Pet Coming Soon', same_as="Warrior"),
+    ClassDef('Daimon', model="Offensive Caster"),
+    ClassDef('Dark BattleMage', same_as="Royal BattleMage"),
+    ClassDef('Dark Caster', same_as="Immortal Dark Caster"),
+    ClassDef('Dark Chaos Berserker', same_as="Chaos Slayer Berserker"),
+    ClassDef('Dark Cryomancer', same_as="Cryomancer"),
+    ClassDef('Dark Glaceran Warlord', same_as="Glaceran Warlord"),
+    ClassDef('Dark Harbinger', same_as="Soul Cleaver"),
+    ClassDef('Dark Legendary Hero', model="Tank Melee"),
     ClassDef(
         'Dark Lord',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -764,11 +787,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Dark Master of Moglins'),
-    ClassDef('Dark Metal Necro'),
-    ClassDef('Dark Ultra OmniNight'),
+    ClassDef('Dark Master of Moglins', same_as="Master of Moglins"),
+    ClassDef('Dark Metal Necro', same_as="Doom Metal Necro"),
+    ClassDef('Dark Ultra OmniNight', same_as="Ultra OmniKnight"),
     ClassDef(
         'Darkblood StormKing',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Mana Vamp', alternative='', base=''),
@@ -794,10 +818,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Darkside'),
-    ClassDef('DeathKnight'),
+    ClassDef('Darkside', model="Offensive Caster"),
+    ClassDef('DeathKnight', model="Tank Melee"),
     ClassDef(
         'DeathKnight Lord',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -823,10 +848,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Debris Highlord'),
-    ClassDef('Defender'),
+    ClassDef('Debris Highlord', same_as="Void Highlord"),
+    ClassDef('Defender', model="Defensive Caster"),
     ClassDef(
         'Doom Metal Necro',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -852,10 +878,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Penitence', alternative='', base=''),
         ),
     ),
-    ClassDef('DoomKnight'),
+    ClassDef('DoomKnight', model="Tank Melee"),
     ClassDef('DoomKnight OverLord'),
     ClassDef(
         'Draco Knight',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -881,9 +908,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Dragon Knight'),
+    ClassDef('Dragon Knight', same_as="Draco Knight"),
     ClassDef(
         'Dragon of Time',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Healer', alternative='', base=''),
             weapon=Slot(best='Healer Awe Blast', alternative='', base=''),
@@ -909,10 +937,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Dragon Shinobi'),
-    ClassDef('Dragonlord'),
+    ClassDef('Dragon Shinobi', same_as="DragonSoul Shinobi"),
+    ClassDef('Dragonlord', model="Power Melee"),
     ClassDef(
         'Dragonslayer',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Fighter', alternative='', base=''),
@@ -940,6 +969,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Dragonslayer General',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -965,12 +995,13 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('DragonSoul Shinobi'),
-    ClassDef('Drakel Warlord'),
-    ClassDef('Drakkar Knight'),
-    ClassDef('Elemental Dracomancer'),
+    ClassDef('DragonSoul Shinobi', model="Dodge Melee"),
+    ClassDef('Drakel Warlord', model="Tank Melee"),
+    ClassDef('Drakkar Knight', same_as="Draco Knight"),
+    ClassDef('Elemental Dracomancer', model="Offensive Caster"),
     ClassDef(
         'Empyrean Chronomancer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -996,9 +1027,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Enchanted Vampire Lord'),
+    ClassDef('Enchanted Vampire Lord', same_as="Vampire Lord"),
     ClassDef(
         'Enforcer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1024,9 +1056,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Eternal Chronomancer'),
+    ClassDef('Eternal Chronomancer', same_as="Empyrean Chronomancer"),
     ClassDef(
         'Eternal Inversionist',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1052,17 +1085,18 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Evolved ClawSuit'),
-    ClassDef('Evolved Dark Caster'),
-    ClassDef('Evolved Leprechaun'),
-    ClassDef('Evolved Pumpkin Lord'),
-    ClassDef('Evolved Shaman'),
-    ClassDef('Exalted Harbinger'),
-    ClassDef('Exalted Soul Cleaver'),
-    ClassDef('FireLord Summoner'),
-    ClassDef('Flame Dragon Warrior'),
+    ClassDef('Evolved ClawSuit', model="Full Hybrid"),
+    ClassDef('Evolved Dark Caster', same_as="Infinite Legion Dark Caster"),
+    ClassDef('Evolved Leprechaun', model="Luck Hybrid"),
+    ClassDef('Evolved Pumpkin Lord', model="Power Melee"),
+    ClassDef('Evolved Shaman', model="Power Caster"),
+    ClassDef('Exalted Harbinger', same_as="Soul Cleaver"),
+    ClassDef('Exalted Soul Cleaver', same_as="Soul Cleaver"),
+    ClassDef('FireLord Summoner', same_as="Blaze Binder"),
+    ClassDef('Flame Dragon Warrior', model="Tank Melee"),
     ClassDef(
         'Frost SpiritReaver',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1088,9 +1122,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Penitence', alternative='', base=''),
         ),
     ),
-    ClassDef('Frostblood Titan'),
+    ClassDef('Frostblood Titan', same_as="Blood Titan"),
     ClassDef(
         'Frostval Barbarian',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Fighter Awe Blast', alternative='', base=''),
@@ -1116,9 +1151,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Giftbox'),
+    ClassDef('Giftbox', model="Tank Melee"),
     ClassDef(
         'Glaceran Warlord',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1146,6 +1182,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Glacial Berserker',
+        model="Power Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1171,10 +1208,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Glacial Berserker Test'),
-    ClassDef('Glacial Warlord'),
+    ClassDef('Glacial Berserker Test', same_as="Warrior"),
+    ClassDef('Glacial Warlord', same_as="Glaceran Warlord"),
     ClassDef(
         'Great Thief',
+        model="Luck Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1200,10 +1238,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Grim Necromancer'),
-    ClassDef('Grunge Rocker'),
+    ClassDef('Grim Necromancer', model="Offensive Caster"),
+    ClassDef('Grunge Rocker', same_as="Nu Metal Necro"),
     ClassDef(
         'Guardian',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -1229,15 +1268,16 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Healer'),
-    ClassDef('Heavy Metal Necro'),
-    ClassDef('Heavy Metal Rockstar'),
-    ClassDef('Heroic Naval Commander'),
-    ClassDef('HighSeas Commander'),
-    ClassDef('Hobo Highlord'),
-    ClassDef('Hollowborn No-Class'),
+    ClassDef('Healer', model="Defensive Caster"),
+    ClassDef('Heavy Metal Necro', same_as="Doom Metal Necro"),
+    ClassDef('Heavy Metal Rockstar', same_as="Doom Metal Necro"),
+    ClassDef('Heroic Naval Commander', same_as="Naval Commander"),
+    ClassDef('HighSeas Commander', model="Offensive Caster"),
+    ClassDef('Hobo Highlord', same_as="No Class"),
+    ClassDef('Hollowborn No-Class', same_as="No Class"),
     ClassDef(
         'Hollowborn Vindicator',
+        model="Defensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1263,11 +1303,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Penitence', alternative='', base=''),
         ),
     ),
-    ClassDef('Hollowborn Vindicator Member Preview'),
-    ClassDef('Horc Evader'),
-    ClassDef('Immortal Chronomancer'),
+    ClassDef('Hollowborn Vindicator Member Preview', same_as="Healer"),
+    ClassDef('Horc Evader', model="Dodge Melee"),
+    ClassDef('Immortal Chronomancer', same_as="Empyrean Chronomancer"),
     ClassDef(
         'Immortal Dark Caster',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1293,10 +1334,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Imperial Chunin'),
-    ClassDef('Infinite Dark Caster'),
+    ClassDef('Imperial Chunin', same_as="Chunin"),
+    ClassDef('Infinite Dark Caster', same_as="Infinite Legion Dark Caster"),
     ClassDef(
         'Infinite Legion Dark Caster',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1322,9 +1364,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Infinity Hero'),
+    ClassDef('Infinity Hero', model="Tank Melee"),
     ClassDef(
         'Infinity Knight',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Awe Blast', alternative='', base=''),
@@ -1350,11 +1393,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Infinity Titan'),
-    ClassDef('Interstellar Knight'),
-    ClassDef('Kathool Adept'),
+    ClassDef('Infinity Titan', model="Defensive Caster"),
+    ClassDef('Interstellar Knight', model="Offensive Caster"),
+    ClassDef('Kathool Adept', model="Defensive Caster"),
     ClassDef(
         "King's Echo",
+        model="Power Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1380,9 +1424,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Legendary Elemental Warrior'),
+    ClassDef('Legendary Elemental Warrior', same_as="Ultra Elemental Warrior"),
     ClassDef(
         'Legendary Hero',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1408,10 +1453,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Legendary Naval Commander'),
-    ClassDef('Legion BladeMaster Assassin'),
+    ClassDef('Legendary Naval Commander', same_as="Naval Commander"),
+    ClassDef('Legion BladeMaster Assassin', model="Dodge Melee"),
     ClassDef(
         'Legion DoomKnight',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1437,10 +1483,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Legion DoomKnight Tester'),
-    ClassDef('Legion Evolved Dark Caster'),
+    ClassDef('Legion DoomKnight Tester', same_as="Warrior"),
+    ClassDef('Legion Evolved Dark Caster', same_as="Infinite Legion Dark Caster"),
     ClassDef(
         'Legion Paladin',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1466,9 +1513,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Legion Paladin Member Trial'),
+    ClassDef('Legion Paladin Member Trial', same_as="Warrior"),
     ClassDef(
         'Legion Revenant',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1494,9 +1542,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Legion Revenant Member Test'),
+    ClassDef('Legion Revenant Member Test', same_as="Warrior"),
     ClassDef(
         'Legion SwordMaster Assassin',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -1525,6 +1574,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ClassDef('Leprechaun'),
     ClassDef(
         'Lich',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1552,6 +1602,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'LightCaster',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1577,10 +1628,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('LightCaster Test'),
-    ClassDef('LightMage'),
+    ClassDef('LightCaster Test', model="Offensive Caster"),
+    ClassDef('LightMage', model="Offensive Caster"),
     ClassDef(
         'Lord Of Order',
+        model="Defensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -1606,9 +1658,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Absolution', alternative='', base=''),
         ),
     ),
-    ClassDef('Love Caster'),
+    ClassDef('Love Caster', same_as="Elemental Dracomancer"),
     ClassDef(
         'Lycan',
+        model="Power Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Dauntless', alternative='', base=''),
@@ -1634,9 +1687,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Mage'),
+    ClassDef('Mage', model="Offensive Caster"),
     ClassDef(
         'Martial Artist',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1662,9 +1716,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Master Martial Artist'),
+    ClassDef('Master Martial Artist', same_as="Martial Artist"),
     ClassDef(
         'Master of Moglins',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1692,6 +1747,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Master Ranger',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Health Vamp', alternative='', base=''),
@@ -1719,6 +1775,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'MechaJouster',
+        model="Power Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1746,6 +1803,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'MindBreaker',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1771,10 +1829,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Mystical Dark Caster'),
-    ClassDef('Mythic Elemental Warrior'),
+    ClassDef('Mystical Dark Caster', same_as="Timeless Dark Caster"),
+    ClassDef('Mythic Elemental Warrior', same_as="Ultra Elemental Warrior"),
     ClassDef(
         'Naval Commander',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1800,10 +1859,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Nechronomancer'),
-    ClassDef('Necromancer'),
+    ClassDef('Nechronomancer', model="Power Melee"),
+    ClassDef('Necromancer', model="Offensive Caster"),
     ClassDef(
         'Necrotic Chronomancer',
+        model="Power Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Health Vamp', alternative='', base=''),
@@ -1829,9 +1889,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Neo Metal Necro'),
+    ClassDef('Neo Metal Necro', same_as="Nu Metal Necro"),
     ClassDef(
         'Ninja',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1857,10 +1918,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Ninja Warrior'),
-    ClassDef('No Class'),
+    ClassDef('Ninja Warrior', model="Dodge Melee"),
+    ClassDef('No Class', model="Tank Melee"),
     ClassDef(
         'Northlands Monk',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1886,14 +1948,15 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('NOT A MOD'),
-    ClassDef('Nu Metal Necro'),
-    ClassDef('Obsidian No Class'),
-    ClassDef('Obsidian Paladin Chronomancer'),
-    ClassDef('Oracle'),
-    ClassDef('Overworld Chronomancer'),
+    ClassDef('NOT A MOD', model="Dodge Melee"),
+    ClassDef('Nu Metal Necro', model="Tank Melee"),
+    ClassDef('Obsidian No Class', same_as="No Class"),
+    ClassDef('Obsidian Paladin Chronomancer', model="Full Hybrid"),
+    ClassDef('Oracle', model="Power Caster"),
+    ClassDef('Overworld Chronomancer', same_as="Timeless Chronomancer"),
     ClassDef(
         'Paladin',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -1921,6 +1984,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Paladin Chronomancer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Fighter Mana Vamp', alternative='', base=''),
@@ -1946,11 +2010,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Absolution', alternative='', base=''),
         ),
     ),
-    ClassDef('Paladin Highlord'),
-    ClassDef('PaladinSlayer'),
-    ClassDef('Phantasm Chronomancer'),
+    ClassDef('Paladin Highlord', model="Full Hybrid"),
+    ClassDef('PaladinSlayer', model="Full Hybrid"),
+    ClassDef('Phantasm Chronomancer', model="Power Caster"),
     ClassDef(
         'Phantom Chronomancer',
+        model="Power Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -1976,13 +2041,14 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Pink Romancer'),
-    ClassDef('Pinkomancer'),
-    ClassDef('Pirate'),
-    ClassDef('Prismatic ClawSuit'),
-    ClassDef('ProtoSartorium'),
+    ClassDef('Pink Romancer', model="Offensive Caster"),
+    ClassDef('Pinkomancer', model="Offensive Caster"),
+    ClassDef('Pirate', model="Luck Hybrid"),
+    ClassDef('Prismatic ClawSuit', model="Full Hybrid"),
+    ClassDef('ProtoSartorium', model="Full Hybrid"),
     ClassDef(
         'Psionic MindBreaker',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -2008,12 +2074,13 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Pumpkin Lord'),
+    ClassDef('Pumpkin Lord', same_as="Warrior"),
     ClassDef('PvP Test - Bard'),
     ClassDef('PvP Test - Healer'),
-    ClassDef('Pyromancer'),
+    ClassDef('Pyromancer', model="Offensive Caster"),
     ClassDef(
         'Quantum Chronomancer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Health Vamp', alternative='', base=''),
@@ -2039,11 +2106,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Ranger'),
-    ClassDef('Renegade'),
-    ClassDef('Rogue'),
+    ClassDef('Ranger', model="Dodge Melee"),
+    ClassDef('Renegade', same_as="Rogue"),
+    ClassDef('Rogue', model="Dodge Melee"),
     ClassDef(
         'Royal BattleMage',
+        model="Power Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -2069,12 +2137,13 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('Royal Vampire Lord'),
-    ClassDef('Rustbucket'),
-    ClassDef('Sakura Cryomancer'),
-    ClassDef('Savage Glaceran Warlord'),
+    ClassDef('Royal Vampire Lord', same_as="Vampire Lord"),
+    ClassDef('Rustbucket', model="Full Hybrid"),
+    ClassDef('Sakura Cryomancer', same_as="Cryomancer"),
+    ClassDef('Savage Glaceran Warlord', same_as="Glaceran Warlord"),
     ClassDef(
         'Scarlet Sorceress',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -2102,6 +2171,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Scion of Flames',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best="Hero's Valiance", alternative='', base=''),
@@ -2129,6 +2199,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Sentinel',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='', alternative='', base=''),
@@ -2154,12 +2225,13 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Shadow Dragon Shinobi'),
-    ClassDef('Shadow Ripper'),
-    ClassDef('Shadow Rocker'),
-    ClassDef('ShadowFlame DragonLord'),
+    ClassDef('Shadow Dragon Shinobi', same_as="DragonSoul Shinobi"),
+    ClassDef('Shadow Ripper', same_as="Doom Metal Necro"),
+    ClassDef('Shadow Rocker', same_as="Nu Metal Necro"),
+    ClassDef('ShadowFlame DragonLord', same_as="Dragonslayer General"),
     ClassDef(
         'ShadowScythe General',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky', alternative='', base=''),
@@ -2185,9 +2257,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('ShadowStalker of Time'),
+    ClassDef('ShadowStalker of Time', same_as="ShadowWalker of Time"),
     ClassDef(
         'ShadowWalker of Time',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -2213,9 +2286,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('ShadowWeaver of Time'),
+    ClassDef('ShadowWeaver of Time', same_as="ShadowWalker of Time"),
     ClassDef(
         'Shaman',
+        model="Power Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Mana Vamp', alternative='', base=''),
@@ -2241,13 +2315,14 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Silver Paladin'),
-    ClassDef('Simple Class'),
-    ClassDef('SkyCharged Grenadier'),
+    ClassDef('Silver Paladin', model="Full Hybrid"),
+    ClassDef('Simple Class', same_as="No Class"),
+    ClassDef('SkyCharged Grenadier', model="Tank Melee"),
     ClassDef('SkyGuard Grenadier'),
-    ClassDef('Sorcerer'),
+    ClassDef('Sorcerer', model="Offensive Caster"),
     ClassDef(
         'Soul Cleaver',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -2273,11 +2348,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Sovereign of Storms'),
-    ClassDef('Star Captain'),
-    ClassDef('StarLord'),
+    ClassDef('Sovereign of Storms', model="Offensive Caster"),
+    ClassDef('Star Captain', model="Tank Melee"),
+    ClassDef('StarLord', model="Dodge Melee"),
     ClassDef(
         'StoneCrusher',
+        model="Defensive Caster",
         base=Mode(
             cls=Slot(best='Fighter', alternative='', base=''),
             weapon=Slot(best='Fighter Awe Blast', alternative='', base=''),
@@ -2305,6 +2381,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'SwordMaster',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -2332,6 +2409,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'SwordMaster Assassin',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -2357,10 +2435,11 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('The Collector'),
-    ClassDef('Thief of Hours'),
+    ClassDef('The Collector', same_as="Vindicator Of They"),
+    ClassDef('Thief of Hours', model="Dodge Melee"),
     ClassDef(
         'TimeKeeper',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -2386,9 +2465,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Lament', alternative='', base=''),
         ),
     ),
-    ClassDef('TimeKiller'),
+    ClassDef('TimeKiller', model="Dodge Melee"),
     ClassDef(
         'Timeless Chronomancer',
+        model="Full Hybrid",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),
@@ -2416,6 +2496,7 @@ CLASSES: tuple[ClassDef, ...] = (
     ),
     ClassDef(
         'Timeless Dark Caster',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Wizard', alternative='', base=''),
             weapon=Slot(best='Wizard Spiral Carve', alternative='', base=''),
@@ -2441,11 +2522,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Troll Spellsmith'),
-    ClassDef('Troubador of Love'),
-    ClassDef('Ultra Elemental Warrior'),
+    ClassDef('Troll Spellsmith', model="Offensive Caster"),
+    ClassDef('Troubador of Love', model="Defensive Caster"),
+    ClassDef('Ultra Elemental Warrior', model="Full Hybrid"),
     ClassDef(
         'Ultra OmniKnight',
+        model="Offensive Caster",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -2471,11 +2553,12 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Umbra'),
-    ClassDef('Unchained Rocker'),
-    ClassDef('Unchained Rockstar'),
+    ClassDef('Umbra', model="Tank Melee"),
+    ClassDef('Unchained Rocker', same_as="Nu Metal Necro"),
+    ClassDef('Unchained Rockstar', same_as="Doom Metal Necro"),
     ClassDef(
         'Undead Goat',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Mana Vamp', alternative='', base=''),
@@ -2501,15 +2584,16 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Undead Leperchaun'),
-    ClassDef('UndeadSlayer'),
-    ClassDef('Underworld Chronomancer'),
-    ClassDef('Unlucky Leperchaun'),
-    ClassDef('Unundead Goat'),
-    ClassDef('Vampire'),
-    ClassDef('Vampire Lord'),
+    ClassDef('Undead Leperchaun', same_as="Unlucky Leperchaun"),
+    ClassDef('UndeadSlayer', model="Tank Melee"),
+    ClassDef('Underworld Chronomancer', same_as="Timeless Chronomancer"),
+    ClassDef('Unlucky Leperchaun', model="Luck Hybrid"),
+    ClassDef('Unundead Goat', model="Tank Melee"),
+    ClassDef('Vampire', same_as="Vampire Lord"),
+    ClassDef('Vampire Lord', model="Full Hybrid"),
     ClassDef(
         'Verus DoomKnight',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -2535,9 +2619,10 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Vindicator Of They'),
+    ClassDef('Vindicator Of They', model="Offensive Caster"),
     ClassDef(
         'Void Highlord',
+        model="Tank Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Awe Blast', alternative='', base=''),
@@ -2563,13 +2648,14 @@ CLASSES: tuple[ClassDef, ...] = (
             cape=Slot(best='Vainglory', alternative='', base=''),
         ),
     ),
-    ClassDef('Void Highlord Tester'),
-    ClassDef('Warlord'),
-    ClassDef('Warrior'),
-    ClassDef('WarriorScythe General'),
-    ClassDef('Witch'),
+    ClassDef('Void Highlord Tester', same_as="Warrior"),
+    ClassDef('Warlord', same_as="Warrior"),
+    ClassDef('Warrior', model="Tank Melee"),
+    ClassDef('WarriorScythe General', same_as="Warrior"),
+    ClassDef('Witch', model="Defensive Caster"),
     ClassDef(
         'Yami no Ronin',
+        model="Dodge Melee",
         base=Mode(
             cls=Slot(best='Lucky', alternative='', base=''),
             weapon=Slot(best='Lucky Spiral Carve', alternative='', base=''),

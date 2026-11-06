@@ -1441,6 +1441,11 @@ class LinuxConsoleApp(App[None]):
 
     async def _install_release_update(self) -> None:
         try:
+            if not await asyncio.to_thread(update_available, 20.0):
+                await self._set_info(
+                    "You already have the latest release.", session="Update"
+                )
+                return
             tag = await asyncio.to_thread(install_latest_release, sys.executable)
         except NoPublishedReleaseError as error:
             await self._set_info(str(error), "#f87171", session="Update")

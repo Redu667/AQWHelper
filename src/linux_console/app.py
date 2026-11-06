@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from http.client import HTTPException
 import logging
 import os
 import re
@@ -600,6 +601,7 @@ class LinuxConsoleApp(App[None]):
         self._character_load_generation = 0
         self._loading_character_generation: int | None = None
         self.restart_requested = False
+        self._restore_target: tuple[str, list[str], set[str]] | None = None
         self.nav_mode = False
         self.nav_pane = "right"
         self._nav_button: NavButton | None = None
@@ -736,6 +738,7 @@ class LinuxConsoleApp(App[None]):
         await super().action_quit()
 
     async def _clear_runtime_cache(self) -> None:
+        self._restore_target = None
         self.account = None
         self._update_character_placeholder()
         self.character_classes.clear()
@@ -875,7 +878,7 @@ class LinuxConsoleApp(App[None]):
             and not submitted_value.startswith("/")
         ):
             self._leave_first_run()
-            await self._load_character(submitted_value)
+            self._start_character_load(submitted_value)
             return
 
         command_line = event.value.strip().lstrip("/").strip()
@@ -920,14 +923,14 @@ class LinuxConsoleApp(App[None]):
                 return
             if self._is_first_run():
                 self._leave_first_run()
-            await self._load_character(argument)
+            self._start_character_load(argument)
         elif command == "reload":
             if argument:
                 await self._set_info("Usage: reload", "#f87171")
             elif self.account is None:
                 await self._set_info("Set a character first with char NAME.", "#f87171")
             else:
-                await self._load_character(self.account)
+                self._start_character_load(self.account)
         elif command == "class":
             if argument:
                 await self._show_selected_class(argument)
@@ -1000,6 +1003,28 @@ class LinuxConsoleApp(App[None]):
         account = f" {self.account}" if self.account else ""
         self.query_one("#command-input", Input).placeholder = f"Char:{account}"
 
+    def _start_character_load(self, account: str) -> None:
+        # A worker keeps the UI responsive while the character page loads.
+        self.run_worker(
+            self._load_character(account),
+            name="load-character",
+            group="character-load",
+            exclusive=True,
+        )
+
+    async def _restore_character(
+        self,
+        account: str,
+        classes: list[str],
+        enhancements: set[str],
+    ) -> None:
+        self.account = account
+        self._update_character_placeholder()
+        self.character_classes = classes
+        self.selected_enhancements = enhancements
+        await self._populate_enhancements()
+        await self._populate_class_list(classes)
+
     async def _load_character(
         self,
         account: str,
@@ -1008,6 +1033,14 @@ class LinuxConsoleApp(App[None]):
     ) -> None:
         self._character_load_generation += 1
         generation = self._character_load_generation
+        if self.account is not None:
+            # Kept on the app because a cancelled load may already have
+            # cleared the current character.
+            self._restore_target = (
+                self.account,
+                self.character_classes,
+                self.selected_enhancements,
+            )
         self.account = None
         self._update_character_placeholder()
         self.character_classes = []
@@ -1024,12 +1057,16 @@ class LinuxConsoleApp(App[None]):
         self._loading_character_generation = generation
         try:
             classes = await asyncio.to_thread(fetch_classes, account)
-        except (OSError, TimeoutError, ValueError) as error:
+        except (OSError, TimeoutError, ValueError, HTTPException) as error:
             if generation != self._character_load_generation:
                 await self._clear_stale_loading_indicator(generation)
                 return
             await class_list.clear()
             self._loading_character_generation = None
+            if self._restore_target is not None:
+                await self._restore_character(*self._restore_target)
+                await self._set_info(f"Could not load {account}: {error}", "#f87171")
+                return
             if isinstance(error, ValueError):
                 self.listed_classes = []
                 if background_startup:
@@ -1060,6 +1097,8 @@ class LinuxConsoleApp(App[None]):
         except (OSError, ValueError) as error:
             await class_list.clear()
             self._loading_character_generation = None
+            if self._restore_target is not None:
+                await self._restore_character(*self._restore_target)
             await self._set_info(
                 f"Could not load enhancements for {account}: {error}",
                 "#f87171",
@@ -1069,14 +1108,11 @@ class LinuxConsoleApp(App[None]):
         try:
             self.account_history, _ = save_profile(self.settings_path, account)
         except (OSError, ValueError) as error:
-            await class_list.clear()
-            self._loading_character_generation = None
-            message = f"Loaded {account}, but could not save the profile list: {error}"
-            if background_startup:
-                self.notify(message, severity="error", markup=False)
-            else:
-                await self._set_info(message, "#f87171")
-            return
+            self.notify(
+                f"Loaded {account}, but could not save the profile list: {error}",
+                severity="warning",
+                markup=False,
+            )
 
         self.account = account
         self._update_character_placeholder()
@@ -1384,7 +1420,7 @@ class LinuxConsoleApp(App[None]):
             if index_text.isdecimal():
                 index = int(index_text)
                 if 0 <= index < len(self.account_history):
-                    await self._load_character(self.account_history[index])
+                    self._start_character_load(self.account_history[index])
         elif button_id == "update-yes":
             await self._start_release_update()
         elif button_id == "update-no" or button_id == "update-ok":

@@ -9,7 +9,7 @@ description = "A command-driven terminal information interface for AQW (works on
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "textual>=1.0",
+    "textual>=3.3",
 ]
 
 [project.scripts]

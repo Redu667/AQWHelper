@@ -36,7 +36,7 @@ CLASSES: tuple[ClassDef, ...] = (
             helm=Slot(best='Lucky', base="Wizard"),
             cape=Slot(best='Lucky', base="Wizard"),
             tonic='Sage Tonic',
-            elixir='Malevolece Elixir',
+            elixir='Malevolence Elixir',
             potion='Felicitous Philtre',
         ),
         solo=Mode(

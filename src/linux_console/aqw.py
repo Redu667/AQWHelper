@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import re
@@ -6,7 +7,7 @@ from typing import Any
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
-from linux_console.platform_utils import get_config_directory
+from linux_console.platform_utils import get_config_directory, is_windows
 
 
 CHARACTER_PAGE_URL = "https://account.aq.com/CharPage"
@@ -58,7 +59,59 @@ REMOVED_ENHANCEMENTS = ("Awe",)
 
 def config_path() -> Path:
     config_home = get_config_directory()
+    if not is_windows():
+        _move_files_from_config_root(config_home)
     return config_home / "config.json"
+
+
+def _move_files_from_config_root(config_home: Path) -> None:
+    # Versions 1.1 to 1.5 saved profiles straight into ~/.config. Only files
+    # with this app's exact keys are moved. profiles.json goes last so an
+    # interrupted move is retried, and a failed move never stops the app.
+    root = config_home.parent
+    old_profiles = root / "profiles.json"
+    old = _read_json(old_profiles)
+    if not _is_profile_data(old):
+        return
+    with contextlib.suppress(OSError):
+        characters = config_home / "characters"
+        characters.mkdir(parents=True, exist_ok=True)
+        for path in (root / "characters").glob("*.json"):
+            character = _read_json(path)
+            if isinstance(character, dict) and set(character) == {"account", "enhancements"}:
+                path.replace(characters / path.name)
+        with contextlib.suppress(OSError):
+            (root / "characters").rmdir()
+
+        new_profiles = config_home / "profiles.json"
+        current = _read_json(new_profiles)
+        if _is_profile_data(current):
+            moved = {name.casefold() for name in old["profiles"]}
+            profiles = [
+                name for name in current["profiles"] if name.casefold() not in moved
+            ] + old["profiles"]
+            _write_profiles(
+                new_profiles, profiles, old["last_used"] or current["last_used"]
+            )
+            old_profiles.unlink()
+        else:
+            old_profiles.replace(new_profiles)
+
+
+def _is_profile_data(data: Any) -> bool:
+    return (
+        isinstance(data, dict)
+        and set(data) == {"last_used", "profiles"}
+        and isinstance(data["profiles"], list)
+        and all(isinstance(name, str) for name in data["profiles"])
+    )
+
+
+def _read_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        return None
 
 
 def profile_data_path(settings_path: Path) -> Path:

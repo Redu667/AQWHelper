@@ -751,6 +751,8 @@ CLASSES: tuple[ClassDef, ...] = (
         ),
     ),
     ClassDef('Cryomancer Mini Pet Coming Soon', same_as="Warrior"),
+    ClassDef('CTR Aegis', model="Full Hybrid"),
+    ClassDef('CTR Zodiac', model="Full Hybrid"),
     ClassDef('Daimon', model="Offensive Caster"),
     ClassDef('Dark BattleMage', same_as="Royal BattleMage"),
     ClassDef('Dark Caster', same_as="Immortal Dark Caster"),

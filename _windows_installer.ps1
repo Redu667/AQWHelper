@@ -12,11 +12,8 @@ if (-not $?) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller -ErrorAction Stop
     
-    # Install Python with PATH added
-    & $pythonInstaller /quiet InstallAllUsers=1 PrependPath=1
-    
-    # Wait for installation to complete
-    Start-Sleep -Seconds 10
+    # Install Python with PATH added and wait for the installer to finish
+    Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1" -Wait
     
     # Clean up installer
     Remove-Item $pythonInstaller -Force

@@ -177,6 +177,7 @@ $PythonExe = '{python_exe_ps}'
 
 try {{
     & $PythonExe -m pip install --upgrade --force-reinstall $ArchivePath -q
+    if ($LASTEXITCODE -ne 0) {{ throw "pip exited with code $LASTEXITCODE" }}
     Remove-Item -Force -Path $ArchivePath -ErrorAction SilentlyContinue
     Write-Host "AQW Helper has been updated to {tag}." -ForegroundColor Green
 }} catch {{
@@ -191,25 +192,23 @@ try {{
     batch_path = script_path.with_suffix(".bat")
     batch_content = f"""@echo off
 REM AQW Helper Update Batch Script
+REM Give the app a moment to exit so pip can replace its files.
+timeout /t 3 /nobreak >nul
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{script_path}"
 pause
 """
     batch_path.write_text(batch_content, encoding="utf-8")
     
-    # Notify the user and provide the batch script path
-    print(
-        f"\n[INFO] Update to {tag} is ready. The app will now exit.\n"
-        f"[INFO] A new window will open to complete the installation.\n"
-        f"[INFO] If it doesn't appear, run: {batch_path}"
-    )
-    
-    # Start the installation script in a detached process
+    # start reads its first quoted argument as the window title, so pass an
+    # empty one before the path.
     try:
         subprocess.Popen(
-            ["cmd", "/c", "start", str(batch_path)],
+            ["cmd", "/c", "start", "", str(batch_path)],
             shell=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    except Exception as e:
-        print(f"[WARNING] Could not auto-start update: {e}\nRun manually: {batch_path}")
+    except OSError as error:
+        raise RuntimeError(
+            f"Could not start the update. Run {batch_path} to finish it."
+        ) from error

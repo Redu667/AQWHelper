@@ -46,6 +46,7 @@ from linux_console.class_data import (
     load_class_data,
     resolve_enhancements,
 )
+from linux_console.platform_utils import is_windows
 from linux_console.version_check import current_version, update_available
 from linux_console.release_update import (
     NoPublishedReleaseError,
@@ -1452,9 +1453,17 @@ class LinuxConsoleApp(App[None]):
                 session="Update",
             )
         else:
+            await self._clear_runtime_cache()
+            if is_windows():
+                # pip runs in its own window once this process has exited.
+                logger.info("Release %s is installing in a separate window", tag)
+                self.exit(
+                    message=f"AQW Helper {tag} is installing in a new window. "
+                    "Open the app again when it finishes."
+                )
+                return
             logger.info("Release %s installed; restarting AQW Helper", tag)
             self.restart_requested = True
-            await self._clear_runtime_cache()
             await super().action_quit()
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:

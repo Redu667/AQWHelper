@@ -13,7 +13,7 @@ from pathlib import Path
 def get_config_directory() -> Path:
     """Get the appropriate config directory for the current platform.
     
-    Linux: XDG_CONFIG_HOME or ~/.config
+    Linux: XDG_CONFIG_HOME/aqw-helper or ~/.config/aqw-helper
     Windows: %APPDATA%\AQW Helper
     """
     if sys.platform.startswith("win"):
@@ -28,7 +28,7 @@ def get_config_directory() -> Path:
         config_home = Path(
             os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config"
         )
-        return config_home
+        return config_home / "aqw-helper"
 
 
 def get_bin_directory() -> Path:

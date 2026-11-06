@@ -2,12 +2,8 @@ from __future__ import annotations
 
 from importlib.resources import files
 import re
-from urllib.request import Request, urlopen
 
-REMOTE_VERSION_URL = (
-    "https://raw.githubusercontent.com/SojaIntegral/AQWHelper/main/"
-    "src/linux_console/VERSION"
-)
+from linux_console.release_update import NoPublishedReleaseError, latest_release_tag
 
 
 def current_version() -> str:
@@ -23,20 +19,13 @@ def current_version() -> str:
 
 def update_available(timeout: float = 3.0) -> bool:
     installed_version = current_version()
-    request = Request(
-        REMOTE_VERSION_URL,
-        headers={
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "User-Agent": "AQWHelper",
-        },
-    )
-    with urlopen(request, timeout=timeout) as response:
-        latest_version = response.read(64).decode("ascii").strip()
-    if not latest_version:
-        raise ValueError("The remote application version is empty.")
+    # Compare against the release /update would install, not main's VERSION.
+    try:
+        latest_version = latest_release_tag(timeout).strip().removeprefix("v")
+    except NoPublishedReleaseError:
+        return False
     if re.fullmatch(r"\d+(?:\.\d+)*", latest_version) is None:
-        raise ValueError("The remote application version is invalid.")
+        raise ValueError("The latest release tag is not a version number.")
 
     return _parse(latest_version) > _parse(installed_version)
 
